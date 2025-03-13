@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Form, Input, Radio, notification } from "antd";
 import { GoogleOutlined } from "@ant-design/icons";
@@ -27,6 +27,8 @@ const Register: React.FC = () => {
         setLoading(true);
         try {
             const response = await axios.post("http://103.112.211.244:6970/api/Auth/SignUp", values);
+            console.log(response);
+            
             openNotification("success", "Registration Successful", "Please check your email for the verification code.");
             
             // Navigate to verification page and pass the email

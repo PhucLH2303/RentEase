@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button, Form, Input, notification, Result } from "antd";
 import axios from "axios";
@@ -40,10 +40,12 @@ const Verify: React.FC = () => {
         setLoading(true);
         try {
             const response = await axios.post("http://103.112.211.244:6970/api/Auth/Verification", {
+                
                 email: email,
                 verificationCode: values.verificationCode
             });
             
+            console.log(response);
             setVerified(true);
             openNotification("success", "Verification Successful", "Your email has been verified successfully!");
             

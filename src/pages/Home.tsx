@@ -1,4 +1,4 @@
-import React from "react";
+
 import { Select, Button } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import ApartmentCard from "../component/card/index";
