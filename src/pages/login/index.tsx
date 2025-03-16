@@ -19,7 +19,7 @@ const Login: React.FC = () => {
     const onFinish = async (values: { username: string; password: string }) => {
         setLoading(true);
         try {
-            const response = await axios.post("http://103.112.211.244:6970/api/Auth/SignIn", values);
+            const response = await axios.post("https://discuss-standing-constant-ronald.trycloudflare.com/api/Auth/SignIn", values);
             localStorage.setItem("token", response.data.token);
             openNotification("success", "Login Successful", "You have successfully logged in.");
             
