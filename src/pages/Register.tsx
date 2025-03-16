@@ -26,7 +26,7 @@ const Register: React.FC = () => {
     }) => {
         setLoading(true);
         try {
-            const response = await axios.post("http://103.112.211.244:6970/api/Auth/SignUp", values);
+            const response = await axios.post("https://discuss-standing-constant-ronald.trycloudflare.com/api/Auth/SignUp", values);
             console.log(response);
             
             openNotification("success", "Registration Successful", "Please check your email for the verification code.");
