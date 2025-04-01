@@ -59,31 +59,16 @@ const Login: React.FC = () => {
     const onFinish = async (values: { username: string; password: string }) => {
         setLoading(true);
         try {
-            const response = await axios.post<LoginResponse>(
-                "https://www.renteasebe.io.vn/api/Auth/SignIn",
-                values
-            );
-            const { accessToken, accountRes } = response.data.data; // Lấy từ response.data.data
-            const roleId = accountRes.roleId;
+            const response = await axios.post("https://discuss-standing-constant-ronald.trycloudflare.com/api/Auth/SignIn", values);
+            localStorage.setItem("token", response.data.token);
+            openNotification("success", "Login Successful", "You have successfully logged in.");
 
-            console.log("Login Token:", accessToken); // Debug token
-            localStorage.setItem("accessToken", accessToken); // Lưu token
-            axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
-
-            const redirectPath = roleId === 1 ? "/home" : "/landlord-home";
-            const redirectMessage = roleId === 1
-                ? "Redirecting to Tenant Home."
-                : "Redirecting to Landlord Home.";
-
-            openNotification("success", "Login Successful", redirectMessage);
-            setTimeout(() => navigate(redirectPath), 1000);
-        } catch (error) {
-            const axiosError = error as AxiosError<ErrorResponse>;
-            openNotification(
-                "error",
-                "Login Failed",
-                axiosError.response?.data?.message || "Invalid credentials or server error"
-            );
+            // Đợi 1 giây trước khi chuyển hướng để hiển thị thông báo
+            setTimeout(() => {
+                navigate("/home");
+            }, 1000);
+        } catch (error: any) {
+            openNotification("error", "Login Failed", error.response?.data?.message || "Please try again.");
         } finally {
             setLoading(false);
         }

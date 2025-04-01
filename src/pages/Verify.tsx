@@ -39,7 +39,7 @@ const Verify: React.FC = () => {
     const onFinish = async (values: { verificationCode: string }) => {
         setLoading(true);
         try {
-            const response = await axios.post("http://103.112.211.244:6970/api/Auth/Verification", {
+            const response = await axios.post("https://discuss-standing-constant-ronald.trycloudflare.com/api/Auth/Verification", {
 
                 email: email,
                 verificationCode: values.verificationCode
