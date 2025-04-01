@@ -1,4 +1,4 @@
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button, Form, Input, notification, Result } from "antd";
 import axios from "axios";
@@ -14,7 +14,7 @@ const Verify: React.FC = () => {
         // Get email from state passed during navigation
         const params = new URLSearchParams(location.search);
         const emailParam = params.get("email");
-        
+
         if (emailParam) {
             setEmail(emailParam);
         } else {
@@ -40,21 +40,21 @@ const Verify: React.FC = () => {
         setLoading(true);
         try {
             const response = await axios.post("http://103.112.211.244:6970/api/Auth/Verification", {
-                
+
                 email: email,
                 verificationCode: values.verificationCode
             });
-            
+
             console.log(response);
             setVerified(true);
             openNotification("success", "Verification Successful", "Your email has been verified successfully!");
-            
+
             // Wait 2 seconds before redirecting to login
             setTimeout(() => {
                 navigate("/");
             }, 2000);
-        } catch (error: any) {
-            openNotification("error", "Verification Failed", error.response?.data?.message || "Invalid verification code. Please try again.");
+        } catch {
+            // openNotification("error", "Verification Failed", error.response?.data?.message || "Invalid verification code. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -69,8 +69,8 @@ const Verify: React.FC = () => {
                         title="Verification Successful!"
                         subTitle="Your account has been verified. Redirecting to login page..."
                         extra={[
-                            <Button 
-                                type="primary" 
+                            <Button
+                                type="primary"
                                 key="login"
                                 onClick={() => navigate("/")}
                                 className="bg-blue-600 hover:bg-blue-700"
@@ -92,7 +92,7 @@ const Verify: React.FC = () => {
                         <img src="/logo.png" alt="Logo" className="mx-auto w-20" />
                         <h2 className="text-3xl font-bold mt-4 text-gray-800">Email Verification</h2>
                         <p className="text-gray-500 mt-2 mb-4">
-                            We've sent a verification code to <span className="font-semibold">{email}</span>. 
+                            We've sent a verification code to <span className="font-semibold">{email}</span>.
                             Please enter the code below to verify your account.
                         </p>
                     </div>
@@ -105,10 +105,10 @@ const Verify: React.FC = () => {
                                 { min: 4, message: "Verification code should be at least 4 characters!" }
                             ]}
                         >
-                            <Input 
-                                size="large" 
-                                placeholder="Enter verification code" 
-                                className="rounded-md text-center text-xl tracking-widest" 
+                            <Input
+                                size="large"
+                                placeholder="Enter verification code"
+                                className="rounded-md text-center text-xl tracking-widest"
                                 maxLength={8}
                             />
                         </Form.Item>

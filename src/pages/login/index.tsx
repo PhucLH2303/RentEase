@@ -1,8 +1,48 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom"; // Import Link
+import { useNavigate, Link } from "react-router-dom";
 import { Button, Checkbox, Form, Input, notification } from "antd";
 import { GoogleOutlined } from "@ant-design/icons";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+
+// Cập nhật interface để khớp với response thực tế
+interface LoginResponse {
+    statusCode: number;
+    message: string;
+    count: number;
+    currentPage: number;
+    totalPages: number;
+    data: {
+        accountRes: {
+            accountId: string;
+            fullName: string;
+            passwordHash: string;
+            email: string;
+            phoneNumber: string | null;
+            dateOfBirth: string | null;
+            genderId: number | null;
+            oldId: string | null;
+            avatarUrl: string | null;
+            roleId: number;
+            isVerify: boolean;
+            createdAt: string;
+            updatedAt: string | null;
+            deletedAt: string | null;
+            status: boolean;
+        };
+        accessToken: string;
+        accountTokenRes: {
+            id: number;
+            accountId: string;
+            refreshToken: string;
+            expiresAt: string;
+            createdAt: string;
+        };
+    };
+}
+
+interface ErrorResponse {
+    message?: string;
+}
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -19,16 +59,31 @@ const Login: React.FC = () => {
     const onFinish = async (values: { username: string; password: string }) => {
         setLoading(true);
         try {
-            const response = await axios.post("http://103.112.211.244:6970/api/Auth/SignIn", values);
-            localStorage.setItem("token", response.data.token);
-            openNotification("success", "Login Successful", "You have successfully logged in.");
-            
-            // Đợi 1 giây trước khi chuyển hướng để hiển thị thông báo
-            setTimeout(() => {
-                navigate("/home");
-            }, 1000);
-        } catch (error: any) {
-            openNotification("error", "Login Failed", error.response?.data?.message || "Please try again.");
+            const response = await axios.post<LoginResponse>(
+                "https://www.renteasebe.io.vn/api/Auth/SignIn",
+                values
+            );
+            const { accessToken, accountRes } = response.data.data; // Lấy từ response.data.data
+            const roleId = accountRes.roleId;
+
+            console.log("Login Token:", accessToken); // Debug token
+            localStorage.setItem("accessToken", accessToken); // Lưu token
+            axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+
+            const redirectPath = roleId === 1 ? "/home" : "/landlord-home";
+            const redirectMessage = roleId === 1
+                ? "Redirecting to Tenant Home."
+                : "Redirecting to Landlord Home.";
+
+            openNotification("success", "Login Successful", redirectMessage);
+            setTimeout(() => navigate(redirectPath), 1000);
+        } catch (error) {
+            const axiosError = error as AxiosError<ErrorResponse>;
+            openNotification(
+                "error",
+                "Login Failed",
+                axiosError.response?.data?.message || "Invalid credentials or server error"
+            );
         } finally {
             setLoading(false);
         }
@@ -37,7 +92,6 @@ const Login: React.FC = () => {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-purple-600">
             <div className="bg-white shadow-2xl rounded-xl flex max-w-4xl w-full overflow-hidden">
-                {/* Hình ảnh */}
                 <div className="hidden md:block w-1/2 relative">
                     <img
                         src="https://source.unsplash.com/800x600/?technology,office"
@@ -46,15 +100,12 @@ const Login: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-black opacity-30"></div>
                 </div>
-
-                {/* Form đăng nhập */}
                 <div className="w-full md:w-1/2 p-12 flex flex-col justify-center">
                     <div className="text-center">
                         <img src="/logo.png" alt="Logo" className="mx-auto w-20" />
                         <h2 className="text-3xl font-bold mt-4 text-gray-800">Welcome Back</h2>
                         <p className="text-gray-500">Sign in to continue</p>
                     </div>
-
                     <Form layout="vertical" onFinish={onFinish} className="mt-6 space-y-4">
                         <Form.Item
                             label="Username"
@@ -63,7 +114,6 @@ const Login: React.FC = () => {
                         >
                             <Input size="large" placeholder="Enter your username" className="rounded-md" />
                         </Form.Item>
-
                         <Form.Item
                             label="Password"
                             name="password"
@@ -71,14 +121,14 @@ const Login: React.FC = () => {
                         >
                             <Input.Password size="large" placeholder="Enter password" className="rounded-md" />
                         </Form.Item>
-
                         <div className="flex items-center justify-between text-sm">
                             <Form.Item name="remember" valuePropName="checked">
                                 <Checkbox>Remember me</Checkbox>
                             </Form.Item>
-                            <a href="#" className="text-blue-600 hover:underline">Forgot password?</a>
+                            <Link to="/forgot-password" className="text-blue-600 hover:underline">
+                                Forgot password?
+                            </Link>
                         </div>
-
                         <Form.Item>
                             <Button
                                 type="primary"
@@ -91,19 +141,21 @@ const Login: React.FC = () => {
                             </Button>
                         </Form.Item>
                     </Form>
-
                     <div className="text-center mt-4">
                         <Button
                             icon={<GoogleOutlined />}
                             className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700"
                             size="large"
+                            onClick={() => notification.info({ message: "Coming soon!" })}
                         >
                             Sign in with Google
                         </Button>
                     </div>
-
                     <p className="text-center mt-6 text-gray-600">
-                        Don't have an account? <Link to="/register" className="text-blue-600 hover:underline">Sign up now</Link>
+                        Don't have an account?{" "}
+                        <Link to="/register" className="text-blue-600 hover:underline">
+                            Sign up now
+                        </Link>
                     </p>
                 </div>
             </div>

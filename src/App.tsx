@@ -10,8 +10,11 @@ import Settings from "../src/pages/Setting";
 import Dashboard from "./pages/admin/dashboard";
 import Users from "./pages/admin/user";
 import Manage from "./pages/admin/manage";
-import DashboardLayout from "./component/dashboard";
 import ApartmentDetail from "./pages/ApartmentDetail";
+//Landlord
+import LoginAdmin from "./pages/admin/login/index";
+import DashboardAdmin from "./component/dashboard";
+import LandLordHome from "../src/pages/landlord/home";
 
 const App: React.FC = () => {
   return (
@@ -20,7 +23,10 @@ const App: React.FC = () => {
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify" element={<Verify />} /> {/* Add the verify route */}
-        <Route path="/dashboard" element={<DashboardLayout />} />
+        <Route path="/admin" element={<LoginAdmin />} />
+        <Route path="/admin/dashboard" element={<DashboardAdmin />} />
+        {/* LandLord */}
+        <Route path="/landlord-home" element={<LandLordHome />} />
         <Route path="dbhome" element={<Dashboard />} />
         <Route path="users" element={<Users />} />
         <Route path="manage" element={<Manage />} />
