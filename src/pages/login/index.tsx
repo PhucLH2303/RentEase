@@ -2,47 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button, Checkbox, Form, Input, notification } from "antd";
 import { GoogleOutlined } from "@ant-design/icons";
-import axios, { AxiosError } from "axios";
-
-// Cập nhật interface để khớp với response thực tế
-interface LoginResponse {
-    statusCode: number;
-    message: string;
-    count: number;
-    currentPage: number;
-    totalPages: number;
-    data: {
-        accountRes: {
-            accountId: string;
-            fullName: string;
-            passwordHash: string;
-            email: string;
-            phoneNumber: string | null;
-            dateOfBirth: string | null;
-            genderId: number | null;
-            oldId: string | null;
-            avatarUrl: string | null;
-            roleId: number;
-            isVerify: boolean;
-            createdAt: string;
-            updatedAt: string | null;
-            deletedAt: string | null;
-            status: boolean;
-        };
-        accessToken: string;
-        accountTokenRes: {
-            id: number;
-            accountId: string;
-            refreshToken: string;
-            expiresAt: string;
-            createdAt: string;
-        };
-    };
-}
-
-interface ErrorResponse {
-    message?: string;
-}
+import axios from "axios";
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -63,12 +23,12 @@ const Login: React.FC = () => {
             localStorage.setItem("token", response.data.token);
             openNotification("success", "Login Successful", "You have successfully logged in.");
 
-            // Đợi 1 giây trước khi chuyển hướng để hiển thị thông báo
             setTimeout(() => {
                 navigate("/home");
             }, 1000);
-        } catch (error: any) {
-            openNotification("error", "Login Failed", error.response?.data?.message || "Please try again.");
+        } catch (error) {
+            const err = error as { response?: { data?: { message?: string } } };
+            openNotification("error", "Login Failed", err.response?.data?.message || "Please try again.");
         } finally {
             setLoading(false);
         }
