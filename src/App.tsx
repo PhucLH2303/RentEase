@@ -12,6 +12,9 @@ import Users from "./pages/admin/user";
 import Manage from "./pages/admin/manage";
 import DashboardLayout from "./component/dashboard";
 import ApartmentDetail from "./pages/ApartmentDetail";
+import PostDetail from "./pages/PostDetail";
+import SuccessPayment from "./pages/SuccessPayment";
+import FailedPayment from "./pages/FailedPayment";
 
 const App: React.FC = () => {
   return (
@@ -21,12 +24,16 @@ const App: React.FC = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/verify" element={<Verify />} /> {/* Add the verify route */}
         <Route path="/dashboard" element={<DashboardLayout />} />
+        <Route path="/payment/success" element={<SuccessPayment />} />
+        <Route path="/payment/failed" element={<FailedPayment />} />
         <Route path="dbhome" element={<Dashboard />} />
         <Route path="users" element={<Users />} />
         <Route path="manage" element={<Manage />} />
         <Route path="/home" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="profile/:id" element={<PostDetail />} />
+          {/* <Route path="/post/:id" element={<PostDetail />} /> */}
           <Route path="settings" element={<Settings />} />
           <Route path="apartment/:id" element={<ApartmentDetail />} />
         </Route>

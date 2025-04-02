@@ -19,8 +19,11 @@ const Login: React.FC = () => {
     const onFinish = async (values: { username: string; password: string }) => {
         setLoading(true);
         try {
-            const response = await axios.post("https://discuss-standing-constant-ronald.trycloudflare.com/api/Auth/SignIn", values);
-            localStorage.setItem("token", response.data.token);
+            const response = await axios.post("https://www.renteasebe.io.vn/api/Auth/SignIn", values);
+            
+            // Lưu accessToken vào localStorage
+            localStorage.setItem("token", response.data.data.accessToken);
+    
             openNotification("success", "Login Successful", "You have successfully logged in.");
             
             // Đợi 1 giây trước khi chuyển hướng để hiển thị thông báo
@@ -33,6 +36,7 @@ const Login: React.FC = () => {
             setLoading(false);
         }
     };
+    
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-purple-600">
