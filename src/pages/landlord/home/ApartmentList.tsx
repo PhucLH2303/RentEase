@@ -1,92 +1,197 @@
-import React, { useState } from 'react';
-import { Edit, Trash2, Home, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Home, CheckCircle, AlertCircle, XCircle, Edit, Trash2, MapPin } from 'lucide-react';
+import axios from 'axios';
 
 interface Apartment {
-    id: number;
-    title: string;
-    details: string;
-    price: string;
-    image: string;
-    status?: 'active' | 'pending' | 'inactive';
-    createdAt?: string;
+    aptId: string;
+    posterId: string;
+    ownerName: string;
+    ownerEmail: string;
+    name: string;
+    area: number;
+    address: string;
+    addressLink: string;
+    provinceId: number;
+    districtId: number;
+    wardId: number;
+    aptCategoryId: number;
+    aptStatusId: number;
+    numberOfRoom: number;
+    numberOfSlot: number;
+    approveStatusId: number;
+ Ascendantly: true;
+    note: string;
+    rating: number;
+    createdAt: string;
+    updatedAt: string | null;
+    deletedAt: string | null;
+    status: boolean;
 }
 
-const initialApartments: Apartment[] = [
-    {
-        id: 1,
-        title: 'Đức Kỳ Túc Xá Cao Cấp - Vị Trí Trung Tâm',
-        details: 'Nội thất đầy đủ | 1.4 triệu/tháng | 20 m² | Phường Hiệp Phước (Quận 9)',
-        price: '1.4 triệu/tháng',
-        image: 'https://via.placeholder.com/150',
-        status: 'active',
-        createdAt: '2025-03-10',
-    },
-    {
-        id: 2,
-        title: 'Phòng Dep, Gần Trường GTVT, Tài Chính, FPT, Hutech Khu E',
-        details: 'Nội thất đầy đủ | 4 triệu/tháng | 15 m² | Phường Tân Nhơn Phú A (Quận 9)',
-        price: '4 triệu/tháng',
-        image: 'https://via.placeholder.com/150',
-        status: 'active',
-        createdAt: '2025-03-15',
-    },
-    {
-        id: 3,
-        title: 'Cho thuê phòng trọ giá rẻ gần Dinh Phông Phước, Ngõ Thủ Đức',
-        details: 'Đức, khu CNC | Nội thất cao cấp | 3 triệu/tháng | 25 m² | Phường Tân Nhơn Phú A (Quận 9)',
-        price: '3 triệu/tháng',
-        image: 'https://via.placeholder.com/150',
-        status: 'pending',
-        createdAt: '2025-03-16',
-    },
-];
+interface ApiResponse {
+    statusCode: number;
+    message: string;
+    count: number;
+    currentPage: number;
+    totalPages: number;
+    data: Apartment[];
+}
 
-const ApartmentList: React.FC = () => {
-    const [apartments, setApartments] = useState<Apartment[]>(initialApartments);
-    const [selectedStatus, setSelectedStatus] = useState<string>('all');
+const UserApartmentList: React.FC = () => {
+    const [apartments, setApartments] = useState<Apartment[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedStatus, setSelectedStatus] = useState<number | 'all'>('all');
+    const navigate = useNavigate();
 
-    const handleDelete = (id: number) => {
-        setApartments(apartments.filter((apartment) => apartment.id !== id));
+    useEffect(() => {
+        fetchApartments();
+    }, []);
+
+    const fetchApartments = async () => {
+        setLoading(true);
+        try {
+            const userString = localStorage.getItem('user');
+            const token = localStorage.getItem('accessToken');
+
+            if (!token || !userString) {
+                setError('Phiên đăng nhập hết hạn hoặc không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+                navigate('/', { state: { from: '/apartments' } });
+                setLoading(false);
+                return;
+            }
+
+            const user = JSON.parse(userString);
+            const accountId = user.accountId; // Sử dụng accountId thay vì id để khớp với Login
+
+            if (!accountId) {
+                setError('Không tìm thấy ID tài khoản. Vui lòng đăng nhập lại.');
+                navigate('/', { state: { from: '/apartments' } });
+                setLoading(false);
+                return;
+            }
+
+            const response = await axios.get<ApiResponse>(
+                `https://renteasebe.io.vn/api/Apt/GetByAccountId?accountId=${accountId}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            setApartments(response.data.data);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching apartments:', err);
+            setError('Không thể tải danh sách căn hộ. Vui lòng thử lại sau.');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleStatusChange = (id: number, newStatus: 'active' | 'pending' | 'inactive') => {
-        setApartments(
-            apartments.map((apartment) =>
-                apartment.id === id ? { ...apartment, status: newStatus } : apartment
-            )
+    const handleDelete = async (aptId: string) => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa căn hộ này không?')) {
+            try {
+                const token = localStorage.getItem('accessToken');
+                await axios.delete(`https://renteasebe.io.vn/api/Apt/${aptId}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                setApartments(apartments.filter(apt => apt.aptId !== aptId));
+            } catch (err) {
+                console.error('Error deleting apartment:', err);
+                alert('Không thể xóa căn hộ. Vui lòng thử lại sau.');
+            }
+        }
+    };
+
+    const handleStatusChange = async (aptId: string, newStatusId: number) => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            await axios.put(
+                `https://renteasebe.io.vn/api/Apt/UpdateStatus`,
+                { aptId, aptStatusId: newStatusId },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+            setApartments(
+                apartments.map(apt =>
+                    apt.aptId === aptId ? { ...apt, aptStatusId: newStatusId } : apt
+                )
+            );
+        } catch (err) {
+            console.error('Error updating apartment status:', err);
+            alert('Không thể cập nhật trạng thái căn hộ. Vui lòng thử lại sau.');
+        }
+    };
+
+    const getApproveStatusName = (statusId: number) => {
+        switch (statusId) {
+            case 1: return 'Đang Duyệt';
+            case 2: return 'Đã Duyệt';
+            case 3: return 'Bị Từ Chối';
+            default: return 'Không xác định';
+        }
+    };
+
+    const getApproveStatusColor = (statusId: number) => {
+        switch (statusId) {
+            case 1: return 'bg-yellow-100 text-yellow-800';
+            case 2: return 'bg-green-100 text-green-800';
+            case 3: return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const getApproveStatusIcon = (statusId: number) => {
+        switch (statusId) {
+            case 1: return <AlertCircle size={14} className="mr-1" />;
+            case 2: return <CheckCircle size={14} className="mr-1" />;
+            case 3: return <XCircle size={14} className="mr-1" />;
+            default: return null;
+        }
+    };
+
+    const getAptStatusName = (statusId: number) => {
+        switch (statusId) {
+            case 1: return 'Đang Cho Thuê';
+            case 2: return 'Đã Thuê';
+            case 3: return 'Ngừng Cho Thuê';
+            default: return 'Không xác định';
+        }
+    };
+
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('vi-VN');
+    };
+
+    const filteredApartments = selectedStatus === 'all'
+        ? apartments
+        : apartments.filter(apt => apt.approveStatusId === selectedStatus);
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            </div>
         );
-    };
+    }
 
-    const filteredApartments =
-        selectedStatus === 'all'
-            ? apartments
-            : apartments.filter((apartment) => apartment.status === selectedStatus);
-
-    const getStatusColor = (status: string = 'active') => {
-        switch (status) {
-            case 'active':
-                return 'bg-green-100 text-green-800';
-            case 'pending':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'inactive':
-                return 'bg-red-100 text-red-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    const getStatusIcon = (status: string = 'active') => {
-        switch (status) {
-            case 'active':
-                return <CheckCircle size={14} className="mr-1" />;
-            case 'pending':
-                return <AlertCircle size={14} className="mr-1" />;
-            case 'inactive':
-                return <XCircle size={14} className="mr-1" />;
-            default:
-                return null;
-        }
-    };
+    if (error) {
+        return (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong className="font-bold">Lỗi!</strong>
+                <span className="block sm:inline"> {error}</span>
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -97,39 +202,35 @@ const ApartmentList: React.FC = () => {
                     <div className="flex bg-gray-100 rounded-lg p-1">
                         <button
                             onClick={() => setSelectedStatus('all')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium ${selectedStatus === 'all'
-                                ? 'bg-white shadow-sm text-blue-600'
-                                : 'text-gray-600 hover:text-blue-600'
-                                }`}
+                            className={`px-3 py-1 rounded-md text-sm font-medium ${
+                                selectedStatus === 'all' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'
+                            }`}
                         >
                             Tất cả
                         </button>
                         <button
-                            onClick={() => setSelectedStatus('active')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${selectedStatus === 'active'
-                                ? 'bg-white shadow-sm text-blue-600'
-                                : 'text-gray-600 hover:text-blue-600'
-                                }`}
+                            onClick={() => setSelectedStatus(1)}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${
+                                selectedStatus === 1 ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'
+                            }`}
                         >
-                            {getStatusIcon('active')} Đang cho thuê
+                            {getApproveStatusIcon(1)} Đang duyệt
                         </button>
                         <button
-                            onClick={() => setSelectedStatus('pending')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${selectedStatus === 'pending'
-                                ? 'bg-white shadow-sm text-blue-600'
-                                : 'text-gray-600 hover:text-blue-600'
-                                }`}
+                            onClick={() => setSelectedStatus(2)}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${
+                                selectedStatus === 2 ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'
+                            }`}
                         >
-                            {getStatusIcon('pending')} Đang duyệt
+                            {getApproveStatusIcon(2)} Đã duyệt
                         </button>
                         <button
-                            onClick={() => setSelectedStatus('inactive')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${selectedStatus === 'inactive'
-                                ? 'bg-white shadow-sm text-blue-600'
-                                : 'text-gray-600 hover:text-blue-600'
-                                }`}
+                            onClick={() => setSelectedStatus(3)}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${
+                                selectedStatus === 3 ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'
+                            }`}
                         >
-                            {getStatusIcon('inactive')} Đã hủy
+                            {getApproveStatusIcon(3)} Bị từ chối
                         </button>
                     </div>
                 </div>
@@ -141,69 +242,81 @@ const ApartmentList: React.FC = () => {
                         <Home size={32} className="text-gray-400" />
                     </div>
                     <h3 className="text-xl font-medium text-gray-700 mb-2">Không có căn hộ nào</h3>
-                    <p className="text-gray-500 mb-6">Bạn chưa có bài đăng nào ở trạng thái này</p>
+                    <p className="text-gray-500 mb-6">Bạn chưa có căn hộ nào ở trạng thái này</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredApartments.map((apartment) => (
                         <div
-                            key={apartment.id}
+                            key={apartment.aptId}
                             className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-shadow"
                         >
                             <div className="relative h-48 overflow-hidden">
                                 <img
-                                    src={apartment.image}
-                                    alt={apartment.title}
+                                    src={`/api/placeholder/400/320`}
+                                    alt={apartment.name}
                                     className="w-full h-full object-cover"
                                 />
                                 <div className="absolute top-3 right-3">
                                     <span
-                                        className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                            apartment.status
+                                        className={`px-3 py-1 rounded-full text-xs font-medium ${getApproveStatusColor(
+                                            apartment.approveStatusId
                                         )} flex items-center`}
                                     >
-                                        {getStatusIcon(apartment.status)}
-                                        {apartment.status === 'active'
-                                            ? 'Đang Cho Thuê'
-                                            : apartment.status === 'pending'
-                                                ? 'Đang Duyệt'
-                                                : 'Đã Hủy'}
+                                        {getApproveStatusIcon(apartment.approveStatusId)}
+                                        {getApproveStatusName(apartment.approveStatusId)}
                                     </span>
                                 </div>
                                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                                     <h3 className="font-bold text-lg text-white mb-1 line-clamp-1">
-                                        {apartment.title}
+                                        {apartment.name}
                                     </h3>
-                                    <span className="text-white font-semibold">{apartment.price}</span>
+                                    <span className="text-white font-semibold">{apartment.area} m²</span>
                                 </div>
                             </div>
                             <div className="p-4">
-                                <p className="text-gray-600 text-sm mb-2 line-clamp-2">{apartment.details}</p>
+                                <div className="flex items-start mb-2">
+                                    <MapPin size={16} className="text-gray-500 mt-1 mr-1 flex-shrink-0" />
+                                    <p className="text-gray-600 text-sm line-clamp-2">{apartment.address}</p>
+                                </div>
+                                <div className="text-sm text-gray-600 mb-2">
+                                    <div>Số phòng: {apartment.numberOfRoom}</div>
+                                    <div>Sức chứa: {apartment.numberOfSlot} người</div>
+                                </div>
+                                <div className="mb-2">
+                                    <p className="text-gray-600 text-sm line-clamp-2">{apartment.note}</p>
+                                </div>
                                 <div className="flex justify-between items-center text-sm text-gray-500">
-                                    <span>Ngày đăng: {apartment.createdAt}</span>
-                                    <span>Trạng thái: {apartment.status}</span>
+                                    <span>Ngày đăng: {formatDate(apartment.createdAt)}</span>
+                                    <span>Trạng thái: {getAptStatusName(apartment.aptStatusId)}</span>
                                 </div>
-                                <div className="mt-4 flex justify-between">
-                                    <button
-                                        onClick={() =>
-                                            handleStatusChange(
-                                                apartment.id,
-                                                apartment.status === 'active' ? 'inactive' : 'active'
-                                            )
-                                        }
-                                        className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center"
-                                    >
-                                        <Edit size={14} className="mr-1" />
-                                        {apartment.status === 'active' ? 'Hủy' : 'Kích hoạt'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(apartment.id)}
-                                        className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 flex items-center"
-                                    >
-                                        <Trash2 size={14} className="mr-1" />
-                                        Xóa
-                                    </button>
-                                </div>
+                                // Trong phần return của UserApartmentList, thêm nút vào div.mt-4
+<div className="mt-4 flex justify-between">
+  <button
+    onClick={() => handleStatusChange(
+      apartment.aptId,
+      apartment.aptStatusId === 1 ? 3 : 1
+    )}
+    className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center"
+  >
+    <Edit size={14} className="mr-1" />
+    {apartment.aptStatusId === 1 ? 'Ngừng cho thuê' : 'Kích hoạt'}
+  </button>
+  <button
+    onClick={() => navigate("/home/create-post", { state: { aptId: apartment.aptId } })}
+    className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 flex items-center"
+  >
+    <Edit size={14} className="mr-1" />
+    Tạo bài đăng
+  </button>
+  <button
+    onClick={() => handleDelete(apartment.aptId)}
+    className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 flex items-center"
+  >
+    <Trash2 size={14} className="mr-1" />
+    Xóa
+  </button>
+</div>
                             </div>
                         </div>
                     ))}
@@ -213,4 +326,4 @@ const ApartmentList: React.FC = () => {
     );
 };
 
-export default ApartmentList;
+export default UserApartmentList;

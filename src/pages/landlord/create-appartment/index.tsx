@@ -96,11 +96,15 @@ const CreateApartment: React.FC = () => {
         wards: [] as Ward[]
     });
 
-    const token = localStorage.getItem("accessToken");
-
     // Transform province data
     const transformProvinceData = useMemo(() => {
         try {
+            console.log("Transforming province data...");
+            if (!provincesData || !Array.isArray(provincesData)) {
+                console.error("Province data is not valid:", provincesData);
+                return [];
+            }
+            
             return (provincesData as RawProvince[]).map(province => ({
                 ...province,
                 Id: Number(province.Id),
@@ -123,52 +127,135 @@ const CreateApartment: React.FC = () => {
         }
     }, []);
 
-    // Fetch initial data
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!token) {
-                notification.error({ message: "Please log in again" });
+    // Updated fetchData function with better token handling and error management
+    const fetchData = async () => {
+        console.log("Fetching data...");
+        const token = localStorage.getItem("accessToken");
+        
+        if (!token) {
+            notification.error({ 
+                message: "Authentication Error", 
+                description: "Please log in again to continue" 
+            });
+            navigate("/login");
+            return;
+        }
+
+        try {
+            // Safely parse JWT token to extract user ID
+            let userId;
+            try {
+                const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+                console.log("Token payload:", tokenPayload);
+                userId = tokenPayload.id || tokenPayload.userId || tokenPayload.sub;
+                
+                if (!userId) {
+                    throw new Error("User ID not found in token");
+                }
+                console.log("User ID from token:", userId);
+            } catch (tokenError) {
+                console.error("Token parsing error:", tokenError);
+                notification.error({
+                    message: "Authentication Error",
+                    description: "Invalid token format. Please log in again."
+                });
                 navigate("/login");
                 return;
             }
 
-            try {
-                const [categoriesRes, statusesRes, accountResponse] = await Promise.all([
-                    axios.get("https://www.renteasebe.io.vn/api/AptCategory/GetAll", {
-                        headers: { Authorization: `Bearer ${token}` }
-                    }),
-                    axios.get("https://www.renteasebe.io.vn/api/AptStatus/GetAll", {
-                        headers: { Authorization: `Bearer ${token}` }
-                    }),
-                    axios.get(`https://www.renteasebe.io.vn/api/Accounts/GetById?id=${JSON.parse(atob(token.split('.')[1])).id}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    })
-                ]);
+            // Configure request headers with CORS considerations
+            const requestConfig = {
+                headers: { 
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            };
 
+            console.log("Making API requests with token...");
+            
+            // Use Promise.allSettled instead of Promise.all for better error handling
+            const [categoriesRes, statusesRes, accountResponse] = await Promise.allSettled([
+                axios.get("https://www.renteasebe.io.vn/api/AptCategory/GetAll", requestConfig),
+                axios.get("https://www.renteasebe.io.vn/api/AptStatus/GetAll", requestConfig),
+                axios.get(`https://www.renteasebe.io.vn/api/Accounts/GetById?id=${userId}`, requestConfig)
+            ]);
+
+            // Handle each response individually
+            if (categoriesRes.status === 'fulfilled') {
+                console.log("Categories loaded:", categoriesRes.value.data);
                 setFormData(prev => ({
                     ...prev,
-                    categories: categoriesRes.data.data,
-                    statuses: statusesRes.data.data,
-                    provinces: transformProvinceData
+                    categories: categoriesRes.value.data.data
                 }));
+            } else {
+                console.error("Categories fetch error:", categoriesRes.reason);
+                notification.error({
+                    message: "Data Loading Error",
+                    description: "Failed to load apartment categories"
+                });
+            }
 
-                const userData = accountResponse.data.data;
+            if (statusesRes.status === 'fulfilled') {
+                console.log("Statuses loaded:", statusesRes.value.data);
+                setFormData(prev => ({
+                    ...prev,
+                    statuses: statusesRes.value.data.data
+                }));
+            } else {
+                console.error("Statuses fetch error:", statusesRes.reason);
+                notification.error({
+                    message: "Data Loading Error",
+                    description: "Failed to load apartment statuses"
+                });
+            }
+
+            if (accountResponse.status === 'fulfilled') {
+                console.log("Account data loaded:", accountResponse.value.data);
+                const userData = accountResponse.value.data.data;
                 form.setFieldsValue({
                     ownerName: userData.fullName,
                     ownerPhone: userData.phoneNumber,
                     ownerEmail: userData.email
                 });
-            } catch (error) {
-                const axiosError = error as AxiosError;
+            } else {
+                console.error("Account fetch error:", accountResponse.reason);
                 notification.error({
-                    message: "Data Fetch Error",
-                    description: axiosError.message
+                    message: "Data Loading Error",
+                    description: "Failed to load account information"
                 });
             }
-        };
 
-        if (token) fetchData();
-    }, [token, form, navigate, transformProvinceData]);
+            // Always set provinces from local data regardless of API failures
+            console.log("Setting provinces from local data");
+            setFormData(prev => ({
+                ...prev,
+                provinces: transformProvinceData
+            }));
+
+        } catch (error) {
+            console.error("Data fetch error:", error);
+            const axiosError = error as AxiosError;
+            
+            // Check if it's a CORS error
+            if (axiosError.message?.includes('Network Error')) {
+                notification.error({
+                    message: "Network Error",
+                    description: "This may be caused by CORS settings on the server. Please contact the administrator."
+                });
+            } else {
+                notification.error({
+                    message: "Data Fetch Error",
+                    description: axiosError.message || "Unknown error occurred"
+                });
+            }
+        }
+    };
+
+    // Add useEffect to call fetchData when component mounts
+    useEffect(() => {
+        console.log("Component mounted, calling fetchData");
+        fetchData();
+    }, []); // Empty dependency array means this runs once on mount
 
     // Handle map click and save location
     const handleLocationSelect = async (latlng: LatLng) => {
@@ -180,7 +267,8 @@ const CreateApartment: React.FC = () => {
             const address = response.data.display_name;
             const mapLink = `https://www.openstreetmap.org/?mlat=${latlng.lat}&mlon=${latlng.lng}#map=15/${latlng.lat}/${latlng.lng}`;
             form.setFieldsValue({ addressLink: mapLink, address });
-        } catch {
+        } catch (error) {
+            console.error("Geocoding error:", error);
             notification.error({
                 message: "Geocoding Error",
                 description: "Could not retrieve address"
@@ -191,6 +279,7 @@ const CreateApartment: React.FC = () => {
     // Location selection handlers
     const handleLocationChange = {
         province: (provinceId: number) => {
+            console.log("Province selected:", provinceId);
             const province = formData.provinces.find(p => p.Id === provinceId);
             if (province) {
                 setFormData(prev => ({ ...prev, districts: province.Districts, wards: [] }));
@@ -202,6 +291,7 @@ const CreateApartment: React.FC = () => {
             }
         },
         district: (districtId: number) => {
+            console.log("District selected:", districtId);
             const district = formData.districts.find(d => d.Id === districtId);
             if (district) {
                 setFormData(prev => ({ ...prev, wards: district.Wards }));
@@ -212,6 +302,7 @@ const CreateApartment: React.FC = () => {
             }
         },
         ward: (wardId: number) => {
+            console.log("Ward selected:", wardId);
             const ward = formData.wards.find(w => w.Id === wardId);
             if (ward) {
                 form.setFieldsValue({
@@ -239,7 +330,19 @@ const CreateApartment: React.FC = () => {
     };
 
     const onFinish = async (values: AptFormData) => {
+        console.log("Form submitted with values:", values);
         setLoading(true);
+        const token = localStorage.getItem("accessToken");
+        
+        if (!token) {
+            notification.error({ 
+                message: "Authentication Error", 
+                description: "Please log in again to continue" 
+            });
+            navigate("/login");
+            return;
+        }
+        
         try {
             const submissionData = {
                 ...values,
@@ -253,6 +356,8 @@ const CreateApartment: React.FC = () => {
                 numberOfSlot: Number(values.numberOfSlot)
             };
 
+            console.log("Submitting data:", submissionData);
+
             await axios.post("https://www.renteasebe.io.vn/api/Apt", submissionData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -263,6 +368,7 @@ const CreateApartment: React.FC = () => {
             });
             setTimeout(() => navigate("/landlord-home"), 1500);
         } catch (error) {
+            console.error("Submission error:", error);
             const axiosError = error as AxiosError<{ message?: string }>;
             notification.error({
                 message: "Apartment Posting Error",

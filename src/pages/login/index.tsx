@@ -19,12 +19,23 @@ const Login: React.FC = () => {
     const onFinish = async (values: { username: string; password: string }) => {
         setLoading(true);
         try {
-            const response = await axios.post("https://discuss-standing-constant-ronald.trycloudflare.com/api/Auth/SignIn", values);
-            localStorage.setItem("token", response.data.token);
+            const response = await axios.post("https://www.renteasebe.io.vn/api/Auth/SignIn", values);
+            
+            const { accessToken, accountRes } = response.data.data; // Lấy token và thông tin user
+            
+            // Lưu vào localStorage
+            localStorage.setItem("accessToken", accessToken);
+            localStorage.setItem("user", JSON.stringify(accountRes)); // Lưu object user dưới dạng JSON string
+            
             openNotification("success", "Login Successful", "You have successfully logged in.");
-
+            
+            // Điều hướng dựa trên roleId
             setTimeout(() => {
-                navigate("/home");
+                if (accountRes.roleId === 1) {
+                    navigate("/admin");
+                } else {
+                    navigate("/home");
+                }
             }, 1000);
         } catch (error) {
             const err = error as { response?: { data?: { message?: string } } };
@@ -33,7 +44,7 @@ const Login: React.FC = () => {
             setLoading(false);
         }
     };
-
+    
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-purple-600">
             <div className="bg-white shadow-2xl rounded-xl flex max-w-4xl w-full overflow-hidden">
