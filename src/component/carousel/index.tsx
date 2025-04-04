@@ -13,6 +13,7 @@ interface Post {
     totalSlot: number;
     currentSlot: number;
     approveStatusId: number;
+    aptId: string; // Thêm aptId vào interface
 }
 
 interface ImageData {
@@ -31,7 +32,7 @@ interface FeaturedCarouselProps {
 
 const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
     const [favorites, setFavorites] = useState<Record<string, boolean>>({});
-    const [images, setImages] = useState<{ [key: string]: string }>({});
+    const [images, setImages] = useState<{ [key: string]: string }>({}); // Mapping từ aptId sang URL ảnh
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const featuredPosts = posts.slice(0, 5);
@@ -58,16 +59,16 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
             try {
                 const headers = {
                     'Authorization': `Bearer ${token}`,
-                    'Accept': '*/*'
+                    'Accept': '*/*',
                 };
 
-                console.log('Fetching images for posts:', featuredPosts.map(p => p.postId));
+                console.log('Fetching images for posts:', featuredPosts.map(p => p.aptId)); // Sử dụng aptId
 
                 const imagePromises = featuredPosts.map(post =>
-                    axios.get(`${API_BASE_URL}/api/AptImage/GetByAptId?aptId=${post.postId}`, { headers })
+                    axios.get(`${API_BASE_URL}/api/AptImage/GetByAptId?aptId=${post.aptId}`, { headers }) // Sử dụng aptId
                         .catch(error => {
-                            console.error(`Failed to fetch image for aptId ${post.postId}:`, error.response?.status);
-                            return { data: { data: { aptId: post.postId, images: [] } } };
+                            console.error(`Failed to fetch image for aptId ${post.aptId}:`, error.response?.status);
+                            return { data: { data: { aptId: post.aptId, images: [] } } };
                         })
                 );
 
@@ -75,10 +76,11 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                 const imageMap = responses.reduce((acc, response, index) => {
                     const imageData: ImageData = response.data.data;
                     if (imageData.images && imageData.images.length > 0) {
-                        acc[featuredPosts[index].postId] = `${API_BASE_URL}${imageData.images[0].imageUrl}`;
-                        console.log(`Image found for ${featuredPosts[index].postId}: ${acc[featuredPosts[index].postId]}`);
+                        const imageUrl = `${API_BASE_URL}${imageData.images[0].imageUrl}`;
+                        acc[featuredPosts[index].aptId] = imageUrl; // Sử dụng aptId
+                        console.log(`Image found for ${featuredPosts[index].aptId}: ${imageUrl}`);
                     } else {
-                        console.log(`No images found for ${featuredPosts[index].postId}`);
+                        console.log(`No images found for ${featuredPosts[index].aptId}`);
                     }
                     return acc;
                 }, {} as { [key: string]: string });
@@ -103,7 +105,7 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
     const toggleFavorite = (postId: string) => {
         setFavorites(prev => ({
             ...prev,
-            [postId]: !prev[postId]
+            [postId]: !prev[postId],
         }));
     };
 
@@ -154,7 +156,8 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                 dots={{ className: 'custom-dots' }}
             >
                 {featuredPosts.map((post) => {
-                    const postImage = images[post.postId] ||
+                    const postImage =
+                        images[post.aptId] || // Sử dụng aptId thay vì postId
                         `https://source.unsplash.com/random/800x600/?apartment,${post.postId}`;
 
                     return (
@@ -164,6 +167,11 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                                     src={postImage}
                                     alt={post.title}
                                     className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-700"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src =
+                                            `https://
+source.unsplash.com/random/800x600/?apartment,${post.postId}`;
+                                    }}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
 
@@ -185,7 +193,7 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                                     <h3 className="text-2xl font-bold mb-2">{post.title}</h3>
                                     <p className="text-xl font-semibold mb-2">
-                                        {post.rentPrice > 0 ? `${post.rentPrice.toLocaleString()} VNĐ/tháng` : "Liên hệ để biết giá"}
+                                        {post.rentPrice > 0 ? `${post.rentPrice.toLocaleString()} VNĐ/tháng` : 'Liên hệ để biết giá'}
                                     </p>
                                     <p className="text-white/80 mb-4 line-clamp-2">{post.note}</p>
                                     <div className="flex justify-between items-center">
