@@ -1,8 +1,60 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 
 const FailedPayment: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [errorCode, setErrorCode] = useState(`ERR${Date.now().toString().slice(-4)}`);
+
+  useEffect(() => {
+    const processFailedPayment = async () => {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        navigate("/", { state: { from: location.pathname } });
+        return;
+      }
+
+      // Parse query parameters from URL
+      const queryParams = new URLSearchParams(location.search);
+      const code = queryParams.get('code');
+      const id = queryParams.get('id');
+      const cancel = queryParams.get('cancel');
+      const status = queryParams.get('status') || 'FAILED';
+      const orderCode = queryParams.get('orderCode');
+
+      if (id && orderCode) {
+        try {
+          // Call the payment callback API with status FAILED
+          await axios.post(
+            'https://www.renteasebe.io.vn/api/Payment/payment-callback',
+            {
+              code: code || '01', // Default error code if not provided
+              id,
+              cancel: cancel === 'true' || true,
+              status: status || 'FAILED',
+              orderCode
+            },
+            {
+              headers: { Authorization: `Bearer ${token}` }
+            }
+          );
+          
+          // Set error code to include order code for reference
+          if (orderCode) {
+            setErrorCode(`ERR-${orderCode}`);
+          }
+        } catch (error) {
+          console.error('Error processing failed payment callback:', error);
+        }
+      }
+      
+      setIsProcessing(false);
+    };
+
+    processFailedPayment();
+  }, [location, navigate]);
 
   const handleTryAgain = () => {
     navigate('/payment');
@@ -11,6 +63,17 @@ const FailedPayment: React.FC = () => {
   const handleBackToHome = () => {
     navigate('/home');
   };
+
+  if (isProcessing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Đang xử lý thông tin...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -22,7 +85,7 @@ const FailedPayment: React.FC = () => {
         <p className="text-gray-600 mb-4">Rất tiếc, giao dịch của bạn không thể hoàn tất.</p>
         
         <div className="text-left text-gray-600 mb-6">
-          <p>Mã lỗi: ERR{Date.now().toString().slice(-4)}</p>
+          <p>Mã lỗi: {errorCode}</p>
           <p>Thời gian: {new Date().toLocaleString()}</p>
           <p>Vui lòng kiểm tra thông tin thanh toán và thử lại.</p>
         </div>
