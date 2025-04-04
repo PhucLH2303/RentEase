@@ -1,9 +1,7 @@
-
-
-const Footer = () => {
+const Footer: React.FC = () => {
   return (
-    <footer className="bg-gray-800 text-white p-4 text-center mt-auto">
-      <p>&copy; 2024 RentEase. All rights reserved.</p>
+    <footer className="bg-gray-900 text-gray-200 p-4 text-center">
+      <p>&copy; 2025 RentEase. All rights reserved.</p>
     </footer>
   );
 };
