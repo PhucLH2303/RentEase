@@ -20,16 +20,16 @@ const Login: React.FC = () => {
         setLoading(true);
         try {
             const response = await axios.post("https://www.renteasebe.io.vn/api/Auth/SignIn", values);
-            
-            const { accessToken, accountRes } = response.data.data; // Lấy token và thông tin user
-            
-            // Lưu vào localStorage
+            const { accessToken, accountRes } = response.data.data;
+
+            // ✅ Lưu thông tin vào localStorage
             localStorage.setItem("accessToken", accessToken);
-            localStorage.setItem("user", JSON.stringify(accountRes)); // Lưu object user dưới dạng JSON string
-            
+            localStorage.setItem("user", JSON.stringify(accountRes));
+            localStorage.setItem("roleId", accountRes.roleId.toString());
+
             openNotification("success", "Login Successful", "You have successfully logged in.");
-            
-            // Điều hướng dựa trên roleId
+
+            // ✅ Điều hướng theo roleId
             setTimeout(() => {
                 if (accountRes.roleId === 1) {
                     navigate("/admin");
@@ -44,13 +44,13 @@ const Login: React.FC = () => {
             setLoading(false);
         }
     };
-    
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 to-purple-600">
             <div className="bg-white shadow-2xl rounded-xl flex max-w-4xl w-full overflow-hidden">
                 <div className="hidden md:block w-1/2 relative">
                     <img
-                        src="https://source.unsplash.com/800x600/?technology,office"
+                        src="https://i.pinimg.com/736x/d8/1b/f3/d81bf3f2e3e706e40962f5f8c69301f8.jpg"
                         alt="Login"
                         className="w-full h-full object-cover"
                     />
@@ -58,7 +58,6 @@ const Login: React.FC = () => {
                 </div>
                 <div className="w-full md:w-1/2 p-12 flex flex-col justify-center">
                     <div className="text-center">
-                        <img src="/logo.png" alt="Logo" className="mx-auto w-20" />
                         <h2 className="text-3xl font-bold mt-4 text-gray-800">Welcome Back</h2>
                         <p className="text-gray-500">Sign in to continue</p>
                     </div>
