@@ -10,7 +10,8 @@ import Settings from "../src/pages/Setting";
 import Dashboard from "./pages/admin/dashboard";
 import Users from "./pages/admin/user";
 import Manage from "./pages/admin/manage";
-import ApartmentDetail from "./pages/ApartmentDetail";
+import ApartmentDetail from "./pages/landlord/home/ApartmentDetail";
+import ApartmentDetailInHome from "./pages/ApartmentDetail";
 import PostDetail from "./pages/PostDetail";
 import SuccessPayment from "./pages/SuccessPayment";
 import FailedPayment from "./pages/FailedPayment";
@@ -45,7 +46,8 @@ const App: React.FC = () => {
           {/* <Route path="/post/:id" element={<PostDetail />} /> */}
           <Route path="landlord-home" element={<LandLordHome />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="apartment/:id" element={<ApartmentDetail />} />
+          <Route path="apartment/detail/:aptId" element={<ApartmentDetail />} />
+          <Route path="apartment/:aptId" element={<ApartmentDetailInHome />} />
         </Route>
       </Routes>
     </Router>
