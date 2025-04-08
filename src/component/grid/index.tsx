@@ -79,7 +79,7 @@ const EnhancedPropertyGrid: React.FC<PropertyGridProps> = ({ posts, categories, 
             <div className="h-48 overflow-hidden relative">
               <img
                 alt={post.title}
-                src={images[post.aptId] || "https://via.placeholder.com/300x200?text=No+Image"}
+                src={images[post.aptId]}
                 className="w-full h-full object-cover"
               />
               <Badge.Ribbon
