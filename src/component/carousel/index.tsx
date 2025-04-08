@@ -153,12 +153,10 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                 ref={carouselRef}
                 autoplay
                 className="rounded-xl overflow-hidden shadow-xl"
-                dots={{ className: 'custom-dots' }}
+                dots={{ className: "custom-dots" }}
             >
                 {featuredPosts.map((post) => {
-                    const postImage =
-                        images[post.aptId] || // Sử dụng aptId thay vì postId
-                        `https://source.unsplash.com/random/800x600/?apartment,${post.postId}`;
+                    const postImage = images[post.aptId]; // Sử dụng hình ảnh mặc định cục bộ
 
                     return (
                         <div key={post.postId} className="relative">
@@ -167,11 +165,6 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                                     src={postImage}
                                     alt={post.title}
                                     className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-700"
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).src =
-                                            `https://
-source.unsplash.com/random/800x600/?apartment,${post.postId}`;
-                                    }}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
 
@@ -179,7 +172,7 @@ source.unsplash.com/random/800x600/?apartment,${post.postId}`;
                                     <Button
                                         shape="circle"
                                         onClick={() => toggleFavorite(post.postId)}
-                                        className={`shadow-lg ${favorites[post.postId] ? 'bg-red-50' : 'bg-white'}`}
+                                        className={`shadow-lg ${favorites[post.postId] ? "bg-red-50" : "bg-white"}`}
                                         icon={favorites[post.postId] ? <HeartFilled className="text-red-500" /> : <HeartOutlined />}
                                     />
                                 </div>
@@ -193,7 +186,7 @@ source.unsplash.com/random/800x600/?apartment,${post.postId}`;
                                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                                     <h3 className="text-2xl font-bold mb-2">{post.title}</h3>
                                     <p className="text-xl font-semibold mb-2">
-                                        {post.rentPrice > 0 ? `${post.rentPrice.toLocaleString()} VNĐ/tháng` : 'Liên hệ để biết giá'}
+                                        {post.rentPrice > 0 ? `${post.rentPrice.toLocaleString()} VNĐ/tháng` : "Liên hệ để biết giá"}
                                     </p>
                                     <p className="text-white/80 mb-4 line-clamp-2">{post.note}</p>
                                     <div className="flex justify-between items-center">
