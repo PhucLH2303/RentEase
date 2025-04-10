@@ -48,6 +48,13 @@ const Navbar: React.FC = () => {
             </Link>
           </li>
         )}
+        {roleId === 3 && (
+          <li>
+            <Link to="/home/apt-favorite" className="text-gray-200 hover:text-white transition duration-300 font-medium">
+              Favorite Apartment
+            </Link>
+          </li>
+        )}
         <li>
           <Link to="/home/profile" className="text-gray-200 hover:text-white transition duration-300 font-medium">
             Profile

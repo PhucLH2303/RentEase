@@ -1,47 +1,42 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { 
   Card, 
   Carousel, 
   Descriptions, 
-  Button,  
-  Avatar, 
   Divider, 
-  Row, 
-  Col,
-  Modal,
-  Rate,
-  Tabs,
-  notification,
+  Typography, 
+  Tag, 
+  Space, 
+  Button, 
+  Rate, 
   Skeleton,
-  Result
+  Row,
+  Col,
+  message 
 } from "antd";
-import {
-  HomeOutlined,
-  EnvironmentOutlined,
-  PhoneOutlined,
-  MessageOutlined,
-  HeartOutlined,
+import { 
+  HomeOutlined, 
+  UserOutlined, 
+  PhoneOutlined, 
+  MailOutlined, 
+  EnvironmentOutlined, 
   CalendarOutlined,
-  WifiOutlined,
-  SafetyOutlined,
-  CarOutlined,
-  KeyOutlined,
-  UserOutlined,
-  FieldTimeOutlined,
   AreaChartOutlined,
-  BankOutlined,
-  TeamOutlined
+  TeamOutlined,
+  TagsOutlined,
+  InfoCircleOutlined,
+  HeartOutlined,
+  HeartFilled
 } from "@ant-design/icons";
-import axios from "axios";
 
-const { TabPane } = Tabs;
+const { Title, Paragraph, Text } = Typography;
 
-interface ApartmentData {
+interface ApartmentDetail {
   aptId: string;
   posterId: string;
   ownerName: string;
-  ownerPhone: string | null;
+  ownerPhone: string;
   ownerEmail: string;
   name: string;
   area: number;
@@ -63,7 +58,7 @@ interface ApartmentData {
   status: boolean;
 }
 
-interface ImageData {
+interface ApartmentImages {
   aptId: string;
   images: {
     id: number;
@@ -82,322 +77,404 @@ interface ApiResponse<T> {
   data: T;
 }
 
-const ApartmentDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [apartment, setApartment] = useState<ApartmentData | null>(null);
-  const [images, setImages] = useState<string[]>([]);
+const categoryMap: Record<number, string> = {
+  1: "Chung cư",
+  2: "Nhà nguyên căn",
+  3: "Nhà trọ",
+  4: "Căn hộ dịch vụ"
+};
+
+const statusMap: Record<number, { text: string; color: string }> = {
+  1: { text: "Đang cho thuê", color: "green" },
+  2: { text: "Đã cho thuê", color: "orange" },
+  3: { text: "Ngừng cho thuê", color: "red" }
+};
+
+const ApartmentDetailPage: React.FC = () => {
+  const { aptId } = useParams<{ aptId: string }>();
+  const [apartmentDetail, setApartmentDetail] = useState<ApartmentDetail | null>(null);
+  const [apartmentImages, setApartmentImages] = useState<ApartmentImages | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isPhoneVisible, setIsPhoneVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const API_BASE_URL = "https://renteasebe.io.vn";
+  const [isLiked, setIsLiked] = useState<boolean>(false);
+  const [likeLoading, setLikeLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    const fetchApartmentData = async () => {
+    const fetchApartmentDetails = async () => {
+      setLoading(true);
       const token = localStorage.getItem("accessToken");
-      if (!token) {
-        navigate("/", { state: { from: `/apartment/${id}` } });
+      
+      // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
+      if (!aptId) {
+        message.error("Mã căn hộ không hợp lệ");
+        setLoading(false);
         return;
       }
-
-      setLoading(true);
-      setError(null);
-
+  
       try {
-        const headers = { Authorization: `Bearer ${token}` };
-        const baseUrl = API_BASE_URL;
-
         // Fetch apartment details
-        const apartmentResponse = await axios.get<ApiResponse<ApartmentData>>(
-          `${baseUrl}/api/Apt/GetById?aptId=${id}`,
-          { headers }
-        );
-        
-        setApartment(apartmentResponse.data.data);
-
-        // Fetch apartment images
-        try {
-          const imagesResponse = await axios.get<ApiResponse<ImageData>>(
-            `${baseUrl}/api/AptImage/GetByAptId?aptId=${id}`,
-            { headers }
-          );
-          
-          const imageData = imagesResponse.data.data;
-          if (imageData && imageData.images && imageData.images.length > 0) {
-            const imageUrls = imageData.images.map(img => `${baseUrl}${img.imageUrl}`);
-            setImages(imageUrls);
-          } else {
-            // Default images if no images available
-            setImages([
-              "https://noithatmanhhe.vn/media/29426/decor-phong-tro-12m2-dep-tien-nghi.jpg",
-              "https://www.tapdoantrananh.com.vn/uploads/files/2020/11/09/nha-tro-gac-lung-dep-8.jpg"
-            ]);
+        const detailResponse = await fetch(
+          `https://renteasebe.io.vn/api/Apt/GetById?aptId=${aptId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
-        } catch (imgError) {
-          console.error("Failed to fetch apartment images:", imgError);
-          setImages([
-            "https://noithatmanhhe.vn/media/29426/decor-phong-tro-12m2-dep-tien-nghi.jpg",
-            "https://www.tapdoantrananh.com.vn/uploads/files/2020/11/09/nha-tro-gac-lung-dep-8.jpg"
-          ]);
+        );
+        const detailData: ApiResponse<ApartmentDetail> = await detailResponse.json();
+  
+        // Fetch apartment images
+        const imagesResponse = await fetch(
+          `https://renteasebe.io.vn/api/AptImage/GetByAptId?aptId=${aptId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const imagesData: ApiResponse<ApartmentImages> = await imagesResponse.json();
+  
+        if (detailData.statusCode === 200) {
+          setApartmentDetail(detailData.data);
+        } else {
+          message.error("Không thể tải thông tin căn hộ");
         }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown error";
-        setError(`Failed to load apartment data: ${errorMessage}`);
-        notification.error({
-          message: "Error loading apartment data",
-          description: errorMessage,
-          placement: "topRight",
-        });
+  
+        if (imagesData.statusCode === 200) {
+          setApartmentImages(imagesData.data);
+        } else {
+          message.error("Không thể tải hình ảnh căn hộ");
+        }
+
+        // Check if apartment is liked by current user
+        await checkLikeStatus(aptId, token);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        message.error("Đã xảy ra lỗi khi tải dữ liệu");
       } finally {
         setLoading(false);
       }
     };
-
-    if (id) {
-      fetchApartmentData();
+  
+    if (aptId) {
+      fetchApartmentDetails();
+    } else {
+      message.error("Không tìm thấy mã căn hộ");
+      setLoading(false);
     }
-  }, [id, navigate]);
-
-  const showPhoneNumber = () => {
-    setIsPhoneVisible(true);
+  }, [aptId]);
+  
+  // Function to check if user has liked this apartment
+  const checkLikeStatus = async (aptId: string, token: string | null) => {
+    try {
+      // This is an example, you may need to implement the actual API endpoint
+      // to check if an apartment is liked by the current user
+      const response = await fetch(
+        `https://renteasebe.io.vn/api/AccountLikedApt/Check-Like?aptId=${aptId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      const data = await response.json();
+      if (data.statusCode === 200) {
+        setIsLiked(data.data);
+      }
+    } catch (error) {
+      console.error("Error checking like status:", error);
+      // If the endpoint doesn't exist, we can default to not liked
+      setIsLiked(false);
+    }
   };
 
-  const showImageModal = (image: string) => {
-    setSelectedImage(image);
-    setIsModalVisible(true);
+  const handleLikeApartment = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      message.warning("Vui lòng đăng nhập để lưu căn hộ yêu thích");
+      return;
+    }
+
+    // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
+    if (!aptId) {
+      message.error("Mã căn hộ không hợp lệ");
+      return;
+    }
+
+    setLikeLoading(true);
+    try {
+      const response = await fetch(
+        "https://renteasebe.io.vn/api/AccountLikedApt/Add-Like",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            aptId: aptId
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.statusCode === 200) {
+        setIsLiked(true);
+        message.success("Đã thêm vào danh sách yêu thích");
+      } else {
+        message.error(data.message || "Không thể thêm vào danh sách yêu thích");
+      }
+    } catch (error) {
+      console.error("Error liking apartment:", error);
+      message.error("Đã xảy ra lỗi khi thêm vào yêu thích");
+    } finally {
+      setLikeLoading(false);
+    }
   };
 
-  // Mock amenities and rules since they're not in the API response
-  const amenities = [
-    { icon: <WifiOutlined />, name: "Internet tốc độ cao" },
-    { icon: <SafetyOutlined />, name: "An ninh 24/7" },
-    { icon: <CarOutlined />, name: "Chỗ để xe" },
-    { icon: <KeyOutlined />, name: "Khóa cửa từ" },
-  ];
+  const handleUnlikeApartment = async () => {
+    const token = localStorage.getItem("accessToken");
+    
+    // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
+    if (!token || !aptId) {
+      token ? message.error("Mã căn hộ không hợp lệ") : message.warning("Vui lòng đăng nhập để thực hiện");
+      return;
+    }
 
-  const rules = [
-    "Không hút thuốc trong nhà",
-    "Không nuôi thú cưng",
-    "Không tổ chức tiệc tùng",
-    "Giờ giới nghiêm: 23:00",
-  ];
+    setLikeLoading(true);
+    try {
+      // This assumes there's an API endpoint to remove a liked apartment
+      const response = await fetch(
+        `https://renteasebe.io.vn/api/AccountLikedApt/Remove-Like?aptId=${aptId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.statusCode === 200) {
+        setIsLiked(false);
+        message.success("Đã xóa khỏi danh sách yêu thích");
+      } else {
+        message.error(data.message || "Không thể xóa khỏi danh sách yêu thích");
+      }
+    } catch (error) {
+      console.error("Error unliking apartment:", error);
+      message.error("Đã xảy ra lỗi khi xóa khỏi yêu thích");
+    } finally {
+      setLikeLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString("vi-VN");
   };
 
+  const openMapsLink = () => {
+    if (apartmentDetail?.addressLink) {
+      window.open(apartmentDetail.addressLink, "_blank");
+    }
+  };
+
+  const contactOwner = () => {
+    if (apartmentDetail?.ownerPhone) {
+      window.location.href = `tel:${apartmentDetail.ownerPhone}`;
+    }
+  };
+
+  const emailOwner = () => {
+    if (apartmentDetail?.ownerEmail) {
+      window.location.href = `mailto:${apartmentDetail.ownerEmail}`;
+    }
+  };
+
   if (loading) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
-        <Skeleton active />
-        <Skeleton.Image style={{ width: '100%', height: '400px' }} />
-        <Skeleton active />
+      <div className="p-6">
+        <Skeleton active avatar paragraph={{ rows: 10 }} />
       </div>
     );
   }
 
-  if (error || !apartment) {
+  if (!apartmentDetail) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
-        <Result
-          status="error"
-          title="Không thể tải thông tin căn hộ"
-          subTitle={error || "Không tìm thấy dữ liệu căn hộ."}
-          extra={
-            <Button type="primary" onClick={() => navigate('/home')}>
-              Về trang chủ
-            </Button>
-          }
-        />
+      <div className="p-6 text-center">
+        <Title level={3}>Không tìm thấy thông tin căn hộ</Title>
+        <Button type="primary" onClick={() => window.history.back()}>Quay lại</Button>
       </div>
     );
   }
+
+  const imageBaseUrl = "https://renteasebe.io.vn";
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <Row gutter={[24, 24]}>
-        <Col xs={24} lg={16}>
-          {/* Title and Basic Info */}
-          <Card className="mb-6">
-            <h1 className="text-2xl font-bold mb-4">{apartment.name}</h1>
-            <div className="flex items-center gap-4 mb-2">
-              <Rate disabled defaultValue={apartment.rating || 4.5} className="text-sm" />
-              <span className="text-gray-500">(Đánh giá)</span>
-            </div>
-            <p className="text-gray-600">
-              <EnvironmentOutlined className="mr-2" />
-              {apartment.address}
-              {apartment.addressLink && (
-                <a 
-                  href={apartment.addressLink} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="ml-2 text-blue-500 hover:text-blue-700"
-                >
-                  (Xem bản đồ)
-                </a>
-              )}
-            </p>
-          </Card>
+    <div className="container mx-auto p-4">
+      <Card bordered={false} className="mb-6 shadow">
+        <Row gutter={[24, 24]}>
+          <Col xs={24} md={16}>
+            <Title level={2}>{apartmentDetail.name}</Title>
+            <Space className="mb-4">
+              <Tag color={statusMap[apartmentDetail.aptStatusId]?.color || "blue"} icon={<TagsOutlined />}>
+                {statusMap[apartmentDetail.aptStatusId]?.text || "Không xác định"}
+              </Tag>
+              <Tag color="blue" icon={<HomeOutlined />}>
+                {categoryMap[apartmentDetail.aptCategoryId] || "Không xác định"}
+              </Tag>
+              <Tag icon={<CalendarOutlined />}>
+                Đăng ngày: {formatDate(apartmentDetail.createdAt)}
+              </Tag>
+            </Space>
+            <Paragraph>
+              <Space>
+                <EnvironmentOutlined />
+                <Text>{apartmentDetail.address}</Text>
+                <Button type="link" onClick={openMapsLink} size="small">
+                  Xem bản đồ
+                </Button>
+              </Space>
+            </Paragraph>
+          </Col>
+          <Col xs={24} md={8} className="text-right">
+            <Space direction="vertical" size="middle" className="w-full">
+              <Card className="bg-gray-50">
+                <Title level={4}>Liên hệ chủ nhà</Title>
+                <Paragraph>
+                  <UserOutlined /> {apartmentDetail.ownerName}
+                </Paragraph>
+                <Space>
+                  <Button 
+                    type="primary" 
+                    icon={<PhoneOutlined />} 
+                    onClick={contactOwner}
+                  >
+                    Gọi điện
+                  </Button>
+                  <Button 
+                    icon={<MailOutlined />} 
+                    onClick={emailOwner}
+                  >
+                    Email
+                  </Button>
+                  <Button
+                    type={isLiked ? "default" : "primary"}
+                    danger={isLiked}
+                    icon={isLiked ? <HeartFilled /> : <HeartOutlined />}
+                    onClick={isLiked ? handleUnlikeApartment : handleLikeApartment}
+                    loading={likeLoading}
+                  >
+                    {isLiked ? "Đã thích" : "Yêu thích"}
+                  </Button>
+                </Space>
+              </Card>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
 
-          {/* Image Carousel */}
-          <Card className="mb-6">
-            {images.length > 0 ? (
-              <Carousel autoplay>
-                {images.map((image, index) => (
-                  <div key={index} onClick={() => showImageModal(image)} className="cursor-pointer">
-                    <div style={{ height: '400px', background: '#364d79' }}>
-                      <img
-                        src={image}
-                        alt={`Apartment view ${index + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    </div>
+      <Row gutter={[24, 24]}>
+        <Col xs={24} md={16}>
+          <Card bordered={false} className="mb-6 shadow">
+            {apartmentImages && apartmentImages.images.length > 0 ? (
+              <Carousel autoplay className="mb-4">
+                {apartmentImages.images.map((image) => (
+                  <div key={image.id} className="h-96">
+                    <img
+                      src={`${imageBaseUrl}${image.imageUrl}`}
+                      alt={`${apartmentDetail.name} - Hình ${image.id}`}
+                      className="w-full h-full object-cover rounded"
+                    />
                   </div>
                 ))}
               </Carousel>
             ) : (
-              <div style={{ height: '400px', background: '#f0f2f5', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <p>Không có hình ảnh</p>
+              <div className="h-96 bg-gray-200 flex items-center justify-center rounded">
+                <Text type="secondary">Không có hình ảnh</Text>
               </div>
             )}
-          </Card>
 
-          {/* Detailed Information Tabs */}
-          <Card>
-            <Tabs defaultActiveKey="1">
-              <TabPane tab="Tổng quan" key="1">
-                <Descriptions column={{ xs: 1, md: 2 }} className="mb-4">
-                  <Descriptions.Item label="ID căn hộ">{apartment.aptId}</Descriptions.Item>
-                  <Descriptions.Item label="Diện tích">
-                    <AreaChartOutlined className="mr-2" />{apartment.area}m²
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Số phòng">
-                    <HomeOutlined className="mr-2" />{apartment.numberOfRoom} phòng
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Số chỗ ở">
-                    <TeamOutlined className="mr-2" />{apartment.numberOfSlot} chỗ
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Loại căn hộ">
-                    <BankOutlined className="mr-2" />Loại {apartment.aptCategoryId}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ngày đăng ký">
-                    {formatDate(apartment.createdAt)}
-                  </Descriptions.Item>
-                </Descriptions>
+            <Divider orientation="left">Thông tin chi tiết</Divider>
+            
+            <Descriptions bordered column={{ xs: 1, sm: 2 }}>
+              <Descriptions.Item label={<><AreaChartOutlined /> Diện tích</>}>
+                {apartmentDetail.area} m²
+              </Descriptions.Item>
+              <Descriptions.Item label={<><HomeOutlined /> Số phòng</>}>
+                {apartmentDetail.numberOfRoom} phòng
+              </Descriptions.Item>
+              <Descriptions.Item label={<><TeamOutlined /> Số chỗ ở</>}>
+                {apartmentDetail.numberOfSlot} chỗ
+              </Descriptions.Item>
+              <Descriptions.Item label={<><InfoCircleOutlined /> Loại căn hộ</>}>
+                {categoryMap[apartmentDetail.aptCategoryId] || "Không xác định"}
+              </Descriptions.Item>
+            </Descriptions>
 
-                <Divider />
-
-                <h3 className="font-semibold mb-4">Mô tả chi tiết</h3>
-                <p className="whitespace-pre-line">{apartment.note}</p>
-
-                <Divider />
-
-                <h3 className="font-semibold mb-4">Tiện ích</h3>
-                <Row gutter={[16, 16]}>
-                  {amenities.map((amenity, index) => (
-                    <Col span={12} key={index}>
-                      <div className="flex items-center gap-2">
-                        {amenity.icon}
-                        <span>{amenity.name}</span>
-                      </div>
-                    </Col>
-                  ))}
-                </Row>
-              </TabPane>
-
-              <TabPane tab="Nội quy" key="2">
-                <ul className="list-disc pl-4">
-                  {rules.map((rule, index) => (
-                    <li key={index} className="mb-2">{rule}</li>
-                  ))}
-                </ul>
-              </TabPane>
-
-              <TabPane tab="Vị trí" key="3">
-                <h3 className="font-semibold mb-4">Thông tin vị trí</h3>
-                <p className="mb-2">
-                  <EnvironmentOutlined className="mr-2" />
-                  {apartment.address}
-                </p>
-                {apartment.addressLink && (
-                  <div className="mt-4">
-                    <Button type="primary" href={apartment.addressLink} target="_blank">
-                      Xem trên Google Maps
-                    </Button>
-                  </div>
-                )}
-              </TabPane>
-            </Tabs>
+            <Divider orientation="left">Mô tả</Divider>
+            <Paragraph>{apartmentDetail.note}</Paragraph>
           </Card>
         </Col>
 
-        {/* Contact Information */}
-        <Col xs={24} lg={8}>
-          <Card className="sticky top-6">
-            <div className="flex items-center mb-6">
-              <Avatar size={64} icon={<UserOutlined />} />
-              <div className="ml-4">
-                <h3 className="font-semibold">{apartment.ownerName}</h3>
-                <div className="text-gray-500 text-sm">
-                  <div>
-                    <UserOutlined className="mr-2" />
-                    Email: {apartment.ownerEmail}
-                  </div>
-                  <div>
-                    <FieldTimeOutlined className="mr-2" />
-                    Đăng ký: {formatDate(apartment.createdAt)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <Button 
-                type="primary" 
-                icon={<PhoneOutlined />} 
-                block
-                onClick={showPhoneNumber}
-                disabled={!apartment.ownerPhone}
+        <Col xs={24} md={8}>
+          <Card bordered={false} className="mb-6 shadow">
+            <div className="flex justify-between items-center mb-2">
+              <Title level={4} className="m-0">Đánh giá</Title>
+              <Button
+                type={isLiked ? "primary" : "default"}
+                danger={isLiked}
+                icon={isLiked ? <HeartFilled /> : <HeartOutlined />}
+                onClick={isLiked ? handleUnlikeApartment : handleLikeApartment}
+                loading={likeLoading}
               >
-                {isPhoneVisible && apartment.ownerPhone 
-                  ? apartment.ownerPhone 
-                  : "Xem số điện thoại"}
-              </Button>
-              <Button icon={<MessageOutlined />} block>
-                Nhắn tin
-              </Button>
-              <Button icon={<CalendarOutlined />} block>
-                Đặt lịch xem nhà
-              </Button>
-              <Button icon={<HeartOutlined />} block>
-                Lưu tin
+                {isLiked ? "Đã thích" : "Yêu thích"}
               </Button>
             </div>
+            <div className="flex items-center">
+              <Rate disabled defaultValue={apartmentDetail.rating || 0} />
+              <Text className="ml-2">{apartmentDetail.rating || 0}/5</Text>
+            </div>
+          </Card>
+
+          <Card bordered={false} className="mb-6 shadow">
+            <Title level={4}>Thông tin liên hệ</Title>
+            <Descriptions column={1}>
+              <Descriptions.Item label={<><UserOutlined /> Chủ nhà</>}>
+                {apartmentDetail.ownerName}
+              </Descriptions.Item>
+              <Descriptions.Item label={<><PhoneOutlined /> Điện thoại</>}>
+                {apartmentDetail.ownerPhone}
+              </Descriptions.Item>
+              <Descriptions.Item label={<><MailOutlined /> Email</>}>
+                {apartmentDetail.ownerEmail}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+
+          <Card bordered={false} className="shadow">
+            <Space direction="vertical" className="w-full">
+              <Button type="primary" block size="large" onClick={contactOwner}>
+                Liên hệ ngay
+              </Button>
+              <Button 
+                block 
+                size="large" 
+                icon={isLiked ? <HeartFilled /> : <HeartOutlined />}
+                onClick={isLiked ? handleUnlikeApartment : handleLikeApartment}
+                loading={likeLoading}
+                danger={isLiked}
+                type={isLiked ? "default" : "primary"}
+              >
+                {isLiked ? "Đã lưu vào yêu thích" : "Lưu vào yêu thích"}
+              </Button>
+            </Space>
           </Card>
         </Col>
       </Row>
-
-      {/* Image Modal */}
-      <Modal
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        width={800}
-      >
-        {selectedImage && (
-          <img
-            src={selectedImage}
-            alt="Apartment large view"
-            style={{ width: '100%', height: 'auto' }}
-          />
-        )}
-      </Modal>
     </div>
   );
 };
 
-export default ApartmentDetail;
+export default ApartmentDetailPage;
