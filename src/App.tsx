@@ -20,6 +20,7 @@ import LoginAdmin from "./pages/admin/login/index";
 import DashboardAdmin from "./component/dashboard";
 import LandLordHome from "../src/pages/landlord/home";
 import CreatePost from "./pages/CreatePost";
+import FavoriteApartmentsPage from "./pages/FavoriteApartmentsPage";
 
 const App: React.FC = () => {
   return (
@@ -46,6 +47,7 @@ const App: React.FC = () => {
           {/* <Route path="/post/:id" element={<PostDetail />} /> */}
           <Route path="landlord-home" element={<LandLordHome />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="apt-favorite" element={<FavoriteApartmentsPage />} />
           <Route path="apartment/detail/:aptId" element={<ApartmentDetail />} />
           <Route path="apartment/:aptId" element={<ApartmentDetailInHome />} />
         </Route>

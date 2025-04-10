@@ -22,16 +22,15 @@ const Register: React.FC = () => {
         username: string; 
         password: string; 
         confirmPassword: string;
+        phoneNumber: string;
         roleId: number;
     }) => {
         setLoading(true);
         try {
             const response = await axios.post("https://www.renteasebe.io.vn/api/Auth/SignUp", values);
             console.log(response);
-            
+
             openNotification("success", "Registration Successful", "Please check your email for the verification code.");
-            
-            // Navigate to verification page and pass the email
             navigate(`/verify?email=${encodeURIComponent(values.username)}`);
         } catch (error: any) {
             openNotification("error", "Registration Failed", error.response?.data?.message || "Please try again.");
@@ -88,6 +87,14 @@ const Register: React.FC = () => {
                         </Form.Item>
 
                         <Form.Item
+                            label="Phone Number"
+                            name="phoneNumber"
+                            rules={[{ required: true, message: "Please enter your phone number!" }]}
+                        >
+                            <Input size="large" placeholder="Enter your phone number" className="rounded-md" />
+                        </Form.Item>
+
+                        <Form.Item
                             label="Password"
                             name="password"
                             rules={[
@@ -123,8 +130,8 @@ const Register: React.FC = () => {
                             rules={[{ required: true, message: "Please select your account type!" }]}
                         >
                             <Radio.Group>
-                                <Radio value={2}>Landlord</Radio>
-                                <Radio value={3}>Tenant</Radio>
+                                <Radio value={2}>Lessor</Radio>
+                                <Radio value={3}>Lesses</Radio>
                             </Radio.Group>
                         </Form.Item>
 
