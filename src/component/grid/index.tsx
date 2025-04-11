@@ -123,7 +123,7 @@ const EnhancedPropertyGrid: React.FC<PropertyGridProps> = ({ posts, categories, 
         ))}
     </div>
   );
-  
+
 };
 
 export default EnhancedPropertyGrid;

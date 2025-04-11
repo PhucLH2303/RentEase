@@ -1,26 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { 
-  Card, 
-  Carousel, 
-  Descriptions, 
-  Divider, 
-  Typography, 
-  Tag, 
-  Space, 
-  Button, 
-  Rate, 
+import {
+  Card,
+  Carousel,
+  Descriptions,
+  Divider,
+  Typography,
+  Tag,
+  Space,
+  Button,
+  Rate,
   Skeleton,
   Row,
   Col,
-  message 
+  message
 } from "antd";
-import { 
-  HomeOutlined, 
-  UserOutlined, 
-  PhoneOutlined, 
-  MailOutlined, 
-  EnvironmentOutlined, 
+import {
+  HomeOutlined,
+  UserOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  EnvironmentOutlined,
   CalendarOutlined,
   AreaChartOutlined,
   TeamOutlined,
@@ -115,13 +115,13 @@ const ApartmentDetailPage: React.FC = () => {
     const fetchApartmentDetails = async () => {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
-      
+
       if (!aptId) {
         message.error("Mã căn hộ không hợp lệ");
         setLoading(false);
         return;
       }
-  
+
       try {
         // Fetch apartment details
         const detailResponse = await fetch(
@@ -132,13 +132,13 @@ const ApartmentDetailPage: React.FC = () => {
             },
           }
         );
-        
+
         if (!detailResponse.ok) {
           throw new Error(`Failed to fetch apartment details: ${detailResponse.status}`);
         }
-        
+
         const detailData: ApiResponse<ApartmentDetail> = await detailResponse.json();
-  
+
         // Fetch apartment images
         const imagesResponse = await fetch(
           `https://renteasebe.io.vn/api/AptImage/GetByAptId?aptId=${aptId}`,
@@ -148,19 +148,19 @@ const ApartmentDetailPage: React.FC = () => {
             },
           }
         );
-        
+
         if (!imagesResponse.ok) {
           console.warn(`Failed to fetch apartment images: ${imagesResponse.status}`);
         } else {
           const imagesData: ApiResponse<ApartmentImages> = await imagesResponse.json();
-          
+
           if (imagesData.statusCode === 200) {
             setApartmentImages(imagesData.data);
           } else {
             console.warn("Failed to get apartment images:", imagesData.message);
           }
         }
-        
+
         // Fetch utilities using POST with proper parameters
         try {
           const utilitiesResponse = await fetch(
@@ -171,14 +171,14 @@ const ApartmentDetailPage: React.FC = () => {
                 "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json"
               },
-              body: JSON.stringify({ 
+              body: JSON.stringify({
                 aptId: aptId,
                 page: 1,
                 pageSize: 10
               })
             }
           );
-          
+
           if (!utilitiesResponse.ok) {
             console.warn(`POST utilities failed with status: ${utilitiesResponse.status}`);
           } else {
@@ -192,7 +192,7 @@ const ApartmentDetailPage: React.FC = () => {
         } catch (utilitiesError) {
           console.error("Error fetching utilities:", utilitiesError);
         }
-  
+
         if (detailData.statusCode === 200) {
           setApartmentDetail(detailData.data);
         } else {
@@ -208,7 +208,7 @@ const ApartmentDetailPage: React.FC = () => {
         setLoading(false);
       }
     };
-  
+
     if (aptId) {
       fetchApartmentDetails();
     } else {
@@ -216,7 +216,7 @@ const ApartmentDetailPage: React.FC = () => {
       setLoading(false);
     }
   }, [aptId]);
-  
+
   // Function to check if user has liked this apartment
   const checkLikeStatus = async (aptId: string, token: string | null) => {
     if (!token) {
@@ -224,7 +224,7 @@ const ApartmentDetailPage: React.FC = () => {
       setIsLiked(false);
       return;
     }
-    
+
     try {
       // First try an API that returns the user's liked apartments
       const response = await fetch(
@@ -235,13 +235,13 @@ const ApartmentDetailPage: React.FC = () => {
           },
         }
       );
-      
+
       if (!response.ok) {
         console.warn(`Failed to fetch liked apartments: ${response.status}`);
         setIsLiked(false);
         return;
       }
-      
+
       try {
         const likedApts = await response.json();
         if (likedApts.statusCode === 200) {
@@ -318,7 +318,7 @@ const ApartmentDetailPage: React.FC = () => {
 
   const handleUnlikeApartment = async () => {
     const token = localStorage.getItem("accessToken");
-    
+
     if (!token || !aptId) {
       token ? message.error("Mã căn hộ không hợp lệ") : message.warning("Vui lòng đăng nhập để thực hiện");
       return;
@@ -451,15 +451,15 @@ const ApartmentDetailPage: React.FC = () => {
                   <UserOutlined /> {apartmentDetail.ownerName}
                 </Paragraph>
                 <Space>
-                  <Button 
-                    type="primary" 
-                    icon={<PhoneOutlined />} 
+                  <Button
+                    type="primary"
+                    icon={<PhoneOutlined />}
                     onClick={contactOwner}
                   >
                     Gọi điện
                   </Button>
-                  <Button 
-                    icon={<MailOutlined />} 
+                  <Button
+                    icon={<MailOutlined />}
                     onClick={emailOwner}
                   >
                     Email
@@ -507,7 +507,7 @@ const ApartmentDetailPage: React.FC = () => {
             )}
 
             <Divider orientation="left">Thông tin chi tiết</Divider>
-            
+
             <Descriptions bordered column={{ xs: 1, sm: 2 }}>
               <Descriptions.Item label={<><AreaChartOutlined /> Diện tích</>}>
                 {apartmentDetail.area} m²
@@ -600,9 +600,9 @@ const ApartmentDetailPage: React.FC = () => {
               <Button type="primary" block size="large" onClick={contactOwner}>
                 Liên hệ ngay
               </Button>
-              <Button 
-                block 
-                size="large" 
+              <Button
+                block
+                size="large"
                 icon={isLiked ? <HeartFilled /> : <HeartOutlined />}
                 onClick={isLiked ? handleUnlikeApartment : handleLikeApartment}
                 loading={likeLoading}

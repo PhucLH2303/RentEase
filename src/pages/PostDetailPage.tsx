@@ -1,34 +1,36 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { 
-  Card, 
-  Carousel, 
-  Descriptions, 
-  Divider, 
-  Typography, 
-  Tag, 
-  Space, 
-  Button, 
+import {
+  Card,
+  Carousel,
+  Descriptions,
+  Divider,
+  Typography,
+  Tag,
+  Space,
+  Button,
   Skeleton,
   Row,
   Col,
   Avatar,
-  message 
+  message,
 } from "antd";
-import { 
-  HomeOutlined, 
-  UserOutlined, 
-  PhoneOutlined, 
-  MailOutlined, 
-  EnvironmentOutlined, 
+import {
+  HomeOutlined,
+  UserOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  EnvironmentOutlined,
   CalendarOutlined,
   TeamOutlined,
   TagsOutlined,
   DollarOutlined,
   InfoCircleOutlined,
   HeartOutlined,
-  HeartFilled
+  HeartFilled,
+  MessageOutlined,
 } from "@ant-design/icons";
+import ChatPopup from "../component/chat/index"; // Adjust path if needed
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -121,35 +123,34 @@ interface ApiResponse<T> {
 const categoryMap: Record<number, string> = {
   1: "Phòng ở ghép",
   2: "Tìm người ở ghép",
-  3: "Cho thuê phòng/căn hộ"
+  3: "Cho thuê phòng/căn hộ",
 };
 
 const genderMap: Record<number, { text: string; color: string }> = {
   1: { text: "Nam", color: "blue" },
   2: { text: "Nữ", color: "pink" },
-  3: { text: "Không yêu cầu", color: "green" }
+  3: { text: "Không yêu cầu", color: "green" },
 };
 
 const ageMap: Record<number, string> = {
   1: "18-25",
   2: "26-35",
   3: "36-45",
-  4: "46+"
+  4: "46+",
 };
 
 const approveStatusMap: Record<number, { text: string; color: string }> = {
   1: { text: "Đã phê duyệt", color: "green" },
   2: { text: "Chờ phê duyệt", color: "orange" },
-  3: { text: "Từ chối", color: "red" }
+  3: { text: "Từ chối", color: "red" },
 };
 
 const aptCategoryMap: Record<number, string> = {
   1: "Chung cư",
   2: "Nhà nguyên căn",
   3: "Nhà trọ",
-  4: "Căn hộ dịch vụ"
+  4: "Căn hộ dịch vụ",
 };
-
 
 const PostDetailPage: React.FC = () => {
   const { postId } = useParams<{ postId: string }>();
@@ -161,20 +162,21 @@ const PostDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [likeLoading, setLikeLoading] = useState<boolean>(false);
+  const [chatVisible, setChatVisible] = useState<boolean>(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPostDetails = async () => {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
-      
+
       if (!postId) {
         message.error("Mã bài đăng không hợp lệ");
         setLoading(false);
         return;
       }
-  
+
       try {
-        // Fetch post details
         const postResponse = await fetch(
           `https://renteasebe.io.vn/api/Post/GetById?id=${postId}`,
           {
@@ -183,13 +185,16 @@ const PostDetailPage: React.FC = () => {
             },
           }
         );
-        
+
+        if (!postResponse.ok) {
+          throw new Error(`Failed to fetch post details: ${postResponse.status}`);
+        }
+
         const postData: ApiResponse<PostDetail> = await postResponse.json();
-  
+
         if (postData.statusCode === 200) {
           setPostDetail(postData.data);
-          
-          // Fetch poster details
+
           if (postData.data.posterId) {
             const posterResponse = await fetch(
               `https://renteasebe.io.vn/api/Accounts/GetById?id=${postData.data.posterId}`,
@@ -199,17 +204,20 @@ const PostDetailPage: React.FC = () => {
                 },
               }
             );
-            
+
+            if (!posterResponse.ok) {
+              throw new Error(`Failed to fetch poster details: ${posterResponse.status}`);
+            }
+
             const posterData: ApiResponse<PosterDetail> = await posterResponse.json();
-            
+
             if (posterData.statusCode === 200) {
               setPosterDetail(posterData.data);
             } else {
               message.error("Không thể tải thông tin người đăng");
             }
           }
-          
-          // Fetch apartment details
+
           if (postData.data.aptId) {
             const aptResponse = await fetch(
               `https://renteasebe.io.vn/api/Apt/GetById?aptId=${postData.data.aptId}`,
@@ -219,13 +227,16 @@ const PostDetailPage: React.FC = () => {
                 },
               }
             );
-            
+
+            if (!aptResponse.ok) {
+              throw new Error(`Failed to fetch apartment details: ${aptResponse.status}`);
+            }
+
             const aptData: ApiResponse<ApartmentDetail> = await aptResponse.json();
-            
+
             if (aptData.statusCode === 200) {
               setApartmentDetail(aptData.data);
-              
-              // Fetch apartment images
+
               const imagesResponse = await fetch(
                 `https://renteasebe.io.vn/api/AptImage/GetByAptId?aptId=${postData.data.aptId}`,
                 {
@@ -234,9 +245,13 @@ const PostDetailPage: React.FC = () => {
                   },
                 }
               );
-              
+
+              if (!imagesResponse.ok) {
+                throw new Error(`Failed to fetch apartment images: ${imagesResponse.status}`);
+              }
+
               const imagesData: ApiResponse<ApartmentImages> = await imagesResponse.json();
-              
+
               if (imagesData.statusCode === 200) {
                 setApartmentImages(imagesData.data);
               } else {
@@ -246,8 +261,7 @@ const PostDetailPage: React.FC = () => {
               message.error("Không thể tải thông tin căn hộ");
             }
           }
-          
-          // Check if post is liked by current user (if you have such functionality)
+
           await checkLikeStatus(postId, token);
         } else {
           message.error("Không thể tải thông tin bài đăng");
@@ -259,7 +273,7 @@ const PostDetailPage: React.FC = () => {
         setLoading(false);
       }
     };
-  
+
     if (postId) {
       fetchPostDetails();
     } else {
@@ -267,11 +281,14 @@ const PostDetailPage: React.FC = () => {
       setLoading(false);
     }
   }, [postId]);
-  
-  // Placeholder for checking like status - implement according to your API
+
   const checkLikeStatus = async (postId: string, token: string | null) => {
+    if (!token) {
+      setIsLiked(false);
+      return;
+    }
+
     try {
-      // Example implementation - replace with your actual endpoint
       const response = await fetch(
         `https://renteasebe.io.vn/api/AccountLikedPost/Check-Like?postId=${postId}`,
         {
@@ -280,10 +297,16 @@ const PostDetailPage: React.FC = () => {
           },
         }
       );
-      
+
+      if (!response.ok) {
+        throw new Error(`Failed to check like status: ${response.status}`);
+      }
+
       const data = await response.json();
       if (data.statusCode === 200) {
         setIsLiked(data.data);
+      } else {
+        setIsLiked(false);
       }
     } catch (error) {
       console.error("Error checking like status:", error);
@@ -314,10 +337,14 @@ const PostDetailPage: React.FC = () => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            postId: postId
+            postId: postId,
           }),
         }
       );
+
+      if (!response.ok) {
+        throw new Error(`Failed to like post: ${response.status}`);
+      }
 
       const data = await response.json();
       if (data.statusCode === 200) {
@@ -336,9 +363,11 @@ const PostDetailPage: React.FC = () => {
 
   const handleUnlikePost = async () => {
     const token = localStorage.getItem("accessToken");
-    
+
     if (!token || !postId) {
-      token ? message.error("Mã bài đăng không hợp lệ") : message.warning("Vui lòng đăng nhập để thực hiện");
+      token
+        ? message.error("Mã bài đăng không hợp lệ")
+        : message.warning("Vui lòng đăng nhập để thực hiện");
       return;
     }
 
@@ -353,6 +382,10 @@ const PostDetailPage: React.FC = () => {
           },
         }
       );
+
+      if (!response.ok) {
+        throw new Error(`Failed to unlike post: ${response.status}`);
+      }
 
       const data = await response.json();
       if (data.statusCode === 200) {
@@ -369,6 +402,91 @@ const PostDetailPage: React.FC = () => {
     }
   };
 
+  const chatDirectly = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      message.warning("Vui lòng đăng nhập để trò chuyện");
+      return;
+    }
+
+    if (!postDetail?.posterId) {
+      message.error("Không tìm thấy thông tin người đăng để trò chuyện");
+      return;
+    }
+
+    setChatVisible(false); // Reset state
+    setConversationId(null);
+
+    try {
+      let conversationId: string | null = null;
+      const conversationsResponse = await fetch(
+        `https://renteasebe.io.vn/api/Conversation/GetAll?page=1&pageSize=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!conversationsResponse.ok) {
+        console.warn("Failed to fetch conversations:", conversationsResponse.status);
+      } else {
+        const conversationsData: ApiResponse<
+          { id: string; accountId1: string; accountId2: string; createdAt: string }[]
+        > = await conversationsResponse.json();
+        console.log("GET /api/Conversation/GetAll response:", conversationsData);
+
+        if (conversationsData.statusCode === 200 && conversationsData.data) {
+          const matchingConversation = conversationsData.data.find(
+            (conv) =>
+              conv.accountId1 === postDetail.posterId || conv.accountId2 === postDetail.posterId
+          );
+          if (matchingConversation) {
+            conversationId = matchingConversation.id;
+          }
+        }
+      }
+
+      if (!conversationId) {
+        const createResponse = await fetch("https://renteasebe.io.vn/api/Conversation", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            accountIdReceive: postDetail.posterId,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          throw new Error(`Failed to create conversation: ${createResponse.status}`);
+        }
+
+        const createData: ApiResponse<string> = await createResponse.json();
+        console.log("POST /api/Conversation response:", createData);
+
+        if (createData.statusCode === 200 && createData.data) {
+          conversationId = createData.data;
+        } else {
+          message.error("Không thể tạo cuộc trò chuyện mới");
+          return;
+        }
+      }
+
+      if (conversationId) {
+        console.log("Setting chat state - conversationId:", conversationId, "chatVisible: true");
+        setConversationId(conversationId);
+        setChatVisible(true);
+      } else {
+        message.error("Không thể khởi tạo cuộc trò chuyện");
+      }
+    } catch (error) {
+      console.error("Error in chatDirectly:", error);
+      message.error("Đã xảy ra lỗi khi mở trò chuyện");
+    }
+  };
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString("vi-VN");
@@ -381,18 +499,27 @@ const PostDetailPage: React.FC = () => {
   const openMapsLink = () => {
     if (apartmentDetail?.addressLink) {
       window.open(apartmentDetail.addressLink, "_blank");
+    } else if (apartmentDetail?.address) {
+      const encodedAddress = encodeURIComponent(apartmentDetail.address);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, "_blank");
+    } else {
+      message.warning("Không có thông tin địa chỉ");
     }
   };
 
   const contactPoster = () => {
     if (posterDetail?.phoneNumber) {
       window.location.href = `tel:${posterDetail.phoneNumber}`;
+    } else {
+      message.warning("Không có thông tin số điện thoại");
     }
   };
 
   const emailPoster = () => {
     if (posterDetail?.email) {
       window.location.href = `mailto:${posterDetail.email}`;
+    } else {
+      message.warning("Không có thông tin email");
     }
   };
 
@@ -414,7 +541,9 @@ const PostDetailPage: React.FC = () => {
     return (
       <div className="p-6 text-center">
         <Title level={3}>Không tìm thấy thông tin bài đăng</Title>
-        <Button type="primary" onClick={() => window.history.back()}>Quay lại</Button>
+        <Button type="primary" onClick={() => window.history.back()}>
+          Quay lại
+        </Button>
       </div>
     );
   }
@@ -467,30 +596,25 @@ const PostDetailPage: React.FC = () => {
             <Space direction="vertical" size="middle" className="w-full">
               <Card className="bg-gray-50">
                 <div className="flex items-center mb-4">
-                  <Avatar 
-                    size={64} 
-                    icon={<UserOutlined />} 
+                  <Avatar
+                    size={64}
+                    icon={<UserOutlined />}
                     src={posterDetail?.avatarUrl ? `${imageBaseUrl}${posterDetail.avatarUrl}` : undefined}
                   />
                   <div className="ml-4 text-left">
-                    <Title level={4} className="m-0">{posterDetail?.fullName || "Người đăng"}</Title>
+                    <Title level={4} className="m-0">
+                      {posterDetail?.fullName || "Người đăng"}
+                    </Title>
                     <Text type="secondary">
                       Tham gia: {posterDetail ? formatDate(posterDetail.createdAt) : ""}
                     </Text>
                   </div>
                 </div>
                 <Space>
-                  <Button 
-                    type="primary" 
-                    icon={<PhoneOutlined />} 
-                    onClick={contactPoster}
-                  >
+                  <Button type="primary" icon={<PhoneOutlined />} onClick={contactPoster}>
                     Gọi điện
                   </Button>
-                  <Button 
-                    icon={<MailOutlined />} 
-                    onClick={emailPoster}
-                  >
+                  <Button icon={<MailOutlined />} onClick={emailPoster}>
                     Email
                   </Button>
                   <Button
@@ -520,6 +644,10 @@ const PostDetailPage: React.FC = () => {
                       src={`${imageBaseUrl}${image.imageUrl}`}
                       alt={`Hình ${image.id}`}
                       className="w-full h-full object-cover rounded"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "https://via.placeholder.com/800x600?text=Không+tải+được+hình";
+                      }}
                     />
                   </div>
                 ))}
@@ -531,7 +659,7 @@ const PostDetailPage: React.FC = () => {
             )}
 
             <Divider orientation="left">Thông tin bài đăng</Divider>
-            
+
             <Descriptions bordered column={{ xs: 1, sm: 2 }}>
               <Descriptions.Item label={<><TeamOutlined /> Tổng số chỗ</>}>
                 {postDetail.totalSlot} chỗ
@@ -567,7 +695,7 @@ const PostDetailPage: React.FC = () => {
             </Descriptions>
 
             <Divider orientation="left">Mô tả</Divider>
-            <Paragraph>{postDetail.note}</Paragraph>
+            <Paragraph>{postDetail.note || "Không có mô tả chi tiết"}</Paragraph>
           </Card>
 
           {apartmentDetail && (
@@ -578,9 +706,9 @@ const PostDetailPage: React.FC = () => {
                   Xem chi tiết căn hộ
                 </Button>
               </div>
-              
+
               <Divider />
-              
+
               <Descriptions bordered column={{ xs: 1, sm: 2 }}>
                 <Descriptions.Item label={<><HomeOutlined /> Tên căn hộ</>}>
                   {apartmentDetail.name}
@@ -601,7 +729,7 @@ const PostDetailPage: React.FC = () => {
                   {apartmentDetail.area} m²
                 </Descriptions.Item>
               </Descriptions>
-              
+
               {apartmentDetail.note && (
                 <>
                   <Divider orientation="left">Mô tả căn hộ</Divider>
@@ -630,16 +758,25 @@ const PostDetailPage: React.FC = () => {
                 </Descriptions.Item>
               )}
             </Descriptions>
-            
+
             <Divider />
-            
+
             <Space direction="vertical" className="w-full">
               <Button type="primary" block size="large" onClick={contactPoster}>
                 Liên hệ ngay
               </Button>
-              <Button 
-                block 
-                size="large" 
+              <Button
+                type="primary"
+                block
+                size="large"
+                icon={<MessageOutlined />}
+                onClick={chatDirectly}
+              >
+                Trò chuyện trực tiếp
+              </Button>
+              <Button
+                block
+                size="large"
                 icon={isLiked ? <HeartFilled /> : <HeartOutlined />}
                 onClick={isLiked ? handleUnlikePost : handleLikePost}
                 loading={likeLoading}
@@ -679,10 +816,10 @@ const PostDetailPage: React.FC = () => {
 
           {apartmentDetail && (
             <Card bordered={false} className="shadow">
-              <Button 
-                type="primary" 
-                block 
-                size="large" 
+              <Button
+                type="primary"
+                block
+                size="large"
                 onClick={viewApartmentDetails}
                 icon={<HomeOutlined />}
               >
@@ -692,6 +829,16 @@ const PostDetailPage: React.FC = () => {
           )}
         </Col>
       </Row>
+
+      <ChatPopup
+        visible={chatVisible}
+        onClose={() => {
+          setChatVisible(false);
+          setConversationId(null);
+          console.log("ChatPopup closed");
+        }}
+        conversationId={conversationId}
+      />
     </div>
   );
 };
