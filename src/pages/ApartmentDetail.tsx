@@ -27,7 +27,8 @@ import {
   TagsOutlined,
   InfoCircleOutlined,
   HeartOutlined,
-  HeartFilled
+  HeartFilled,
+  CheckCircleOutlined
 } from "@ant-design/icons";
 
 const { Title, Paragraph, Text } = Typography;
@@ -68,6 +69,17 @@ interface ApartmentImages {
   }[];
 }
 
+interface ApartmentUtility {
+  id: number;
+  aptId: string;
+  utilityId: number;
+  note: string;
+  createdAt: string;
+  updatedAt: string | null;
+  deletedAt: string | null;
+  status: null | boolean;
+}
+
 interface ApiResponse<T> {
   statusCode: number;
   message: string;
@@ -94,6 +106,7 @@ const ApartmentDetailPage: React.FC = () => {
   const { aptId } = useParams<{ aptId: string }>();
   const [apartmentDetail, setApartmentDetail] = useState<ApartmentDetail | null>(null);
   const [apartmentImages, setApartmentImages] = useState<ApartmentImages | null>(null);
+  const [apartmentUtilities, setApartmentUtilities] = useState<ApartmentUtility[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [likeLoading, setLikeLoading] = useState<boolean>(false);
@@ -103,7 +116,6 @@ const ApartmentDetailPage: React.FC = () => {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
       
-      // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
       if (!aptId) {
         message.error("Mã căn hộ không hợp lệ");
         setLoading(false);
@@ -120,6 +132,11 @@ const ApartmentDetailPage: React.FC = () => {
             },
           }
         );
+        
+        if (!detailResponse.ok) {
+          throw new Error(`Failed to fetch apartment details: ${detailResponse.status}`);
+        }
+        
         const detailData: ApiResponse<ApartmentDetail> = await detailResponse.json();
   
         // Fetch apartment images
@@ -131,18 +148,55 @@ const ApartmentDetailPage: React.FC = () => {
             },
           }
         );
-        const imagesData: ApiResponse<ApartmentImages> = await imagesResponse.json();
+        
+        if (!imagesResponse.ok) {
+          console.warn(`Failed to fetch apartment images: ${imagesResponse.status}`);
+        } else {
+          const imagesData: ApiResponse<ApartmentImages> = await imagesResponse.json();
+          
+          if (imagesData.statusCode === 200) {
+            setApartmentImages(imagesData.data);
+          } else {
+            console.warn("Failed to get apartment images:", imagesData.message);
+          }
+        }
+        
+        // Fetch utilities using POST with proper parameters
+        try {
+          const utilitiesResponse = await fetch(
+            `https://renteasebe.io.vn/api/AptUtility/GetByAptId`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ 
+                aptId: aptId,
+                page: 1,
+                pageSize: 10
+              })
+            }
+          );
+          
+          if (!utilitiesResponse.ok) {
+            console.warn(`POST utilities failed with status: ${utilitiesResponse.status}`);
+          } else {
+            const utilitiesData = await utilitiesResponse.json();
+            if (utilitiesData.statusCode === 200) {
+              setApartmentUtilities(utilitiesData.data);
+            } else {
+              console.warn("Failed to get utilities data:", utilitiesData.message);
+            }
+          }
+        } catch (utilitiesError) {
+          console.error("Error fetching utilities:", utilitiesError);
+        }
   
         if (detailData.statusCode === 200) {
           setApartmentDetail(detailData.data);
         } else {
           message.error("Không thể tải thông tin căn hộ");
-        }
-  
-        if (imagesData.statusCode === 200) {
-          setApartmentImages(imagesData.data);
-        } else {
-          message.error("Không thể tải hình ảnh căn hộ");
         }
 
         // Check if apartment is liked by current user
@@ -165,11 +219,16 @@ const ApartmentDetailPage: React.FC = () => {
   
   // Function to check if user has liked this apartment
   const checkLikeStatus = async (aptId: string, token: string | null) => {
+    if (!token) {
+      // If user is not logged in, they haven't liked anything
+      setIsLiked(false);
+      return;
+    }
+    
     try {
-      // This is an example, you may need to implement the actual API endpoint
-      // to check if an apartment is liked by the current user
+      // First try an API that returns the user's liked apartments
       const response = await fetch(
-        `https://renteasebe.io.vn/api/AccountLikedApt/Check-Like?aptId=${aptId}`,
+        `https://renteasebe.io.vn/api/AccountLikedApt/GetByUserId`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -177,13 +236,26 @@ const ApartmentDetailPage: React.FC = () => {
         }
       );
       
-      const data = await response.json();
-      if (data.statusCode === 200) {
-        setIsLiked(data.data);
+      if (!response.ok) {
+        console.warn(`Failed to fetch liked apartments: ${response.status}`);
+        setIsLiked(false);
+        return;
+      }
+      
+      try {
+        const likedApts = await response.json();
+        if (likedApts.statusCode === 200) {
+          const isAptLiked = likedApts.data.some((apt: any) => apt.aptId === aptId);
+          setIsLiked(isAptLiked);
+        } else {
+          setIsLiked(false);
+        }
+      } catch (parseError) {
+        console.error("Error parsing liked apartments response:", parseError);
+        setIsLiked(false);
       }
     } catch (error) {
       console.error("Error checking like status:", error);
-      // If the endpoint doesn't exist, we can default to not liked
       setIsLiked(false);
     }
   };
@@ -195,7 +267,6 @@ const ApartmentDetailPage: React.FC = () => {
       return;
     }
 
-    // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
     if (!aptId) {
       message.error("Mã căn hộ không hợp lệ");
       return;
@@ -217,12 +288,25 @@ const ApartmentDetailPage: React.FC = () => {
         }
       );
 
-      const data = await response.json();
-      if (data.statusCode === 200) {
-        setIsLiked(true);
-        message.success("Đã thêm vào danh sách yêu thích");
-      } else {
-        message.error(data.message || "Không thể thêm vào danh sách yêu thích");
+      if (!response.ok) {
+        throw new Error(`Failed to like apartment: ${response.status}`);
+      }
+
+      try {
+        const data = await response.json();
+        if (data.statusCode === 200) {
+          setIsLiked(true);
+          message.success("Đã thêm vào danh sách yêu thích");
+        } else {
+          message.error(data.message || "Không thể thêm vào danh sách yêu thích");
+        }
+      } catch (parseError) {
+        console.error("Error parsing like response:", parseError);
+        // Assume success if we can't parse the response but got a 200 OK
+        if (response.ok) {
+          setIsLiked(true);
+          message.success("Đã thêm vào danh sách yêu thích");
+        }
       }
     } catch (error) {
       console.error("Error liking apartment:", error);
@@ -235,7 +319,6 @@ const ApartmentDetailPage: React.FC = () => {
   const handleUnlikeApartment = async () => {
     const token = localStorage.getItem("accessToken");
     
-    // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
     if (!token || !aptId) {
       token ? message.error("Mã căn hộ không hợp lệ") : message.warning("Vui lòng đăng nhập để thực hiện");
       return;
@@ -243,7 +326,6 @@ const ApartmentDetailPage: React.FC = () => {
 
     setLikeLoading(true);
     try {
-      // This assumes there's an API endpoint to remove a liked apartment
       const response = await fetch(
         `https://renteasebe.io.vn/api/AccountLikedApt/Remove-Like?aptId=${aptId}`,
         {
@@ -254,12 +336,25 @@ const ApartmentDetailPage: React.FC = () => {
         }
       );
 
-      const data = await response.json();
-      if (data.statusCode === 200) {
-        setIsLiked(false);
-        message.success("Đã xóa khỏi danh sách yêu thích");
-      } else {
-        message.error(data.message || "Không thể xóa khỏi danh sách yêu thích");
+      if (!response.ok) {
+        throw new Error(`Failed to unlike apartment: ${response.status}`);
+      }
+
+      try {
+        const data = await response.json();
+        if (data.statusCode === 200) {
+          setIsLiked(false);
+          message.success("Đã xóa khỏi danh sách yêu thích");
+        } else {
+          message.error(data.message || "Không thể xóa khỏi danh sách yêu thích");
+        }
+      } catch (parseError) {
+        console.error("Error parsing unlike response:", parseError);
+        // Assume success if we can't parse the response but got a 200 OK
+        if (response.ok) {
+          setIsLiked(false);
+          message.success("Đã xóa khỏi danh sách yêu thích");
+        }
       }
     } catch (error) {
       console.error("Error unliking apartment:", error);
@@ -277,18 +372,28 @@ const ApartmentDetailPage: React.FC = () => {
   const openMapsLink = () => {
     if (apartmentDetail?.addressLink) {
       window.open(apartmentDetail.addressLink, "_blank");
+    } else if (apartmentDetail?.address) {
+      // Fallback to using Google Maps with address
+      const encodedAddress = encodeURIComponent(apartmentDetail.address);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, "_blank");
+    } else {
+      message.warning("Không có thông tin địa chỉ");
     }
   };
 
   const contactOwner = () => {
     if (apartmentDetail?.ownerPhone) {
       window.location.href = `tel:${apartmentDetail.ownerPhone}`;
+    } else {
+      message.warning("Không có thông tin số điện thoại");
     }
   };
 
   const emailOwner = () => {
     if (apartmentDetail?.ownerEmail) {
       window.location.href = `mailto:${apartmentDetail.ownerEmail}`;
+    } else {
+      message.warning("Không có thông tin email");
     }
   };
 
@@ -386,6 +491,11 @@ const ApartmentDetailPage: React.FC = () => {
                       src={`${imageBaseUrl}${image.imageUrl}`}
                       alt={`${apartmentDetail.name} - Hình ${image.id}`}
                       className="w-full h-full object-cover rounded"
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.src = "https://via.placeholder.com/800x600?text=Không+tải+được+hình";
+                      }}
                     />
                   </div>
                 ))}
@@ -413,8 +523,26 @@ const ApartmentDetailPage: React.FC = () => {
               </Descriptions.Item>
             </Descriptions>
 
+            {apartmentUtilities.length > 0 && (
+              <>
+                <Divider orientation="left">Tiện ích</Divider>
+                <Row gutter={[16, 16]}>
+                  {apartmentUtilities.map((utility) => (
+                    <Col xs={12} sm={8} md={6} key={utility.id}>
+                      <Card size="small" className="text-center h-full">
+                        <Space direction="vertical" size="small">
+                          <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
+                          <Text strong>{utility.note}</Text>
+                        </Space>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              </>
+            )}
+
             <Divider orientation="left">Mô tả</Divider>
-            <Paragraph>{apartmentDetail.note}</Paragraph>
+            <Paragraph>{apartmentDetail.note || "Không có mô tả chi tiết"}</Paragraph>
           </Card>
         </Col>
 
@@ -437,6 +565,20 @@ const ApartmentDetailPage: React.FC = () => {
               <Text className="ml-2">{apartmentDetail.rating || 0}/5</Text>
             </div>
           </Card>
+
+          {apartmentUtilities.length > 0 && (
+            <Card bordered={false} className="mb-6 shadow">
+              <Title level={4}>Tiện ích có sẵn</Title>
+              <Space direction="vertical" size="small" className="w-full">
+                {apartmentUtilities.map((utility) => (
+                  <div key={utility.id} className="flex items-center">
+                    <CheckCircleOutlined style={{ color: '#52c41a', marginRight: '8px' }} />
+                    <Text>{utility.note}</Text>
+                  </div>
+                ))}
+              </Space>
+            </Card>
+          )}
 
           <Card bordered={false} className="mb-6 shadow">
             <Title level={4}>Thông tin liên hệ</Title>

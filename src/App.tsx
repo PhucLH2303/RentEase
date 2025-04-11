@@ -21,6 +21,8 @@ import DashboardAdmin from "./component/dashboard";
 import LandLordHome from "../src/pages/landlord/home";
 import CreatePost from "./pages/CreatePost";
 import FavoriteApartmentsPage from "./pages/FavoriteApartmentsPage";
+import PostDetailPage from "./pages/PostDetailPage";
+import TransactionHistory from "./pages/TransactionHistory";
 
 const App: React.FC = () => {
   return (
@@ -44,9 +46,10 @@ const App: React.FC = () => {
           <Route path="profile" element={<Profile />} />
           <Route path="profile/:id" element={<PostDetail />} />
           <Route path="create-post" element={<CreatePost />} />
-          {/* <Route path="/post/:id" element={<PostDetail />} /> */}
+          <Route path="post/:postId" element={<PostDetailPage />} />
           <Route path="landlord-home" element={<LandLordHome />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="transaction-history" element={<TransactionHistory />} />
           <Route path="apt-favorite" element={<FavoriteApartmentsPage />} />
           <Route path="apartment/detail/:aptId" element={<ApartmentDetail />} />
           <Route path="apartment/:aptId" element={<ApartmentDetailInHome />} />
