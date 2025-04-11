@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { Drawer, List, Spin, Input, Button } from "antd";
-import { SendOutlined } from "@ant-design/icons";
+import { SendOutlined, MessageOutlined } from "@ant-design/icons";
 
 interface Post {
   postId: string;
@@ -234,7 +234,18 @@ const PostList = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Bài đăng của tôi</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold text-gray-800">Bài đăng của tôi</h2>
+        <Button
+          type="primary"
+          icon={<MessageOutlined />}
+          onClick={showDrawer}
+          size="large"
+        >
+          Chat
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.map((post) => (
           <div key={post.postId} className="bg-white border border-gray-200 p-4 rounded-xl shadow-md hover:shadow-lg transition">
@@ -244,14 +255,9 @@ const PostList = () => {
             <p className="text-gray-700"><strong>Ngày ra:</strong> {post.moveOutDate}</p>
             <p className="text-blue-600 font-semibold"><strong>Còn chỗ:</strong> {post.totalSlot - post.currentSlot} / {post.totalSlot}</p>
             <div className="mt-4 flex justify-between items-center">
-              <div className="flex gap-4">
-                <Link to={`/home/profile/${post.postId}`} className="text-blue-600 hover:underline">
-                  Xem chi tiết →
-                </Link>
-                <button onClick={showDrawer} className="text-purple-600 hover:underline">
-                  Chat 💬
-                </button>
-              </div>
+              <Link to={`/home/profile/${post.postId}`} className="text-blue-600 hover:underline">
+                Xem chi tiết →
+              </Link>
               {accountId && (
                 <Link
                   to={`/home/profile/edit/${post.postId}`}
@@ -276,22 +282,31 @@ const PostList = () => {
         {conversations.length === 0 ? (
           <p className="text-gray-600">Không có cuộc trò chuyện nào.</p>
         ) : (
-          <ul className="space-y-2">
+          <div className="space-y-3">
             {conversations.map((conv) => {
               const otherId = conv.accountId1 === accountId ? conv.accountId2 : conv.accountId1;
               const name = conversationNames[otherId] || "Đang tải...";
               return (
-                <li key={conv.id}>
-                  <button
-                    onClick={() => showMessageDrawer(conv.id)}
-                    className="text-blue-600 hover:underline text-left w-full"
-                  >
-                    {name}
-                  </button>
-                </li>
+                <div
+                  key={conv.id}
+                  className="bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-blue-50 transition cursor-pointer"
+                  onClick={() => showMessageDrawer(conv.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-100 rounded-full w-10 h-10 flex items-center justify-center text-blue-500">
+                      {name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800">{name}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(conv.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               );
             })}
-          </ul>
+          </div>
         )}
       </Drawer>
 

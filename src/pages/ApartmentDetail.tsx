@@ -26,6 +26,7 @@ import {
   TeamOutlined,
   TagsOutlined,
   InfoCircleOutlined,
+  CheckCircleOutlined,
   HeartOutlined,
   HeartFilled,
 } from "@ant-design/icons";
@@ -184,6 +185,8 @@ const ApartmentDetailPage: React.FC = () => {
     }
 
     try {
+      // This is an example, you may need to implement the actual API endpoint
+      // to check if an apartment is liked by the current user
       const response = await fetch(
         `https://renteasebe.io.vn/api/AccountLikedApt/GetByUserId`,
         {
@@ -262,13 +265,9 @@ const ApartmentDetailPage: React.FC = () => {
   const handleUnlikeApartment = async () => {
     const token = localStorage.getItem("accessToken");
 
-    if (!token) {
-      message.warning("Vui lòng đăng nhập để thực hiện");
-      return;
-    }
-
-    if (!aptId) {
-      message.error("Mã căn hộ không hợp lệ");
+    // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
+    if (!token || !aptId) {
+      token ? message.error("Mã căn hộ không hợp lệ") : message.warning("Vui lòng đăng nhập để thực hiện");
       return;
     }
 
@@ -329,85 +328,9 @@ const ApartmentDetailPage: React.FC = () => {
     }
   };
 
-  const contactOwner = async () => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      message.warning("Vui lòng đăng nhập để liên hệ");
-      return;
-    }
-
-    if (!apartmentDetail?.posterId) {
-      message.error("Không tìm thấy thông tin chủ nhà để liên hệ");
-      return;
-    }
-
-    try {
-      // First, try to fetch all conversations to check for an existing one
-      const allConversationsResponse = await fetch(
-        "https://renteasebe.io.vn/api/Conversation/GetAll?page=1&pageSize=10",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const allConversations: ApiResponse<
-        { id: string; accountId1: string; accountId2: string; createdAt: string }[]
-      > = await allConversationsResponse.json();
-      console.log("GET /api/Conversation/GetAll response:", allConversations);
-
-      let conversationId: string | null = null;
-
-      if (allConversations.statusCode === 200) {
-        // Filter conversations where posterId matches accountId1 or accountId2
-        const matchingConversations = allConversations.data.filter(
-          (conv) =>
-            conv.accountId2 === apartmentDetail.posterId ||
-            conv.accountId1 === apartmentDetail.posterId
-        );
-
-        // If there are matching conversations, select the most recent one
-        if (matchingConversations.length > 0) {
-          const mostRecentConversation = matchingConversations.reduce((latest, current) => {
-            return new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest;
-          });
-          conversationId = mostRecentConversation.id;
-        }
-      }
-
-      // If no matching conversation was found, create a new one
-      if (!conversationId) {
-        const createResponse = await fetch("https://renteasebe.io.vn/api/Conversation", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            accountIdReceive: apartmentDetail.posterId,
-          }),
-        });
-        const createData: ApiResponse<string> = await createResponse.json();
-        console.log("POST /api/Conversation response:", createData);
-
-        if (createData.statusCode === 200 && createData.data) {
-          conversationId = createData.data;
-        } else {
-          message.error("Không thể tạo cuộc trò chuyện");
-          return;
-        }
-      }
-
-      // Open the chat with the obtained conversationId
-      if (conversationId) {
-        setConversationId(conversationId);
-        setChatVisible(true);
-      } else {
-        message.error("Không thể mở cuộc trò chuyện");
-      }
-    } catch (error) {
-      console.error("Error in contactOwner:", error);
-      message.error("Đã xảy ra lỗi khi liên hệ");
+  const contactOwner = () => {
+    if (apartmentDetail?.ownerPhone) {
+      window.location.href = `tel:${apartmentDetail.ownerPhone}`;
     }
   };
 
