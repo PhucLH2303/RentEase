@@ -73,9 +73,10 @@ const PostList = () => {
 
     const fetchPosts = async () => {
       try {
-        const response = await axios.get(`https://renteasebe.io.vn/api/Post/GetByAccountId?accountId=${accountId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await axios.get(
+          `https://renteasebe.io.vn/api/Post/GetByAccountId?accountId=${accountId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         setPosts(response.data.data as Post[]);
       } catch (err) {
         console.error("Error fetching posts:", err);
@@ -233,10 +234,8 @@ const PostList = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-2xl font-bold text-center text-gray-800">
-        {accountId ? "Bài đăng của tôi" : "Danh sách bài đăng"}
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+      <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Bài đăng của tôi</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {posts.map((post) => (
           <div key={post.postId} className="bg-white border border-gray-200 p-4 rounded-xl shadow-md hover:shadow-lg transition">
             <h3 className="text-lg font-semibold text-gray-900 truncate">{post.title}</h3>
@@ -254,7 +253,10 @@ const PostList = () => {
                 </button>
               </div>
               {accountId && (
-                <Link to={`/home/profile/edit/${post.postId}`} className="text-green-600 hover:underline">
+                <Link
+                  to={`/home/profile/edit/${post.postId}`}
+                  className="text-green-600 text-sm font-medium hover:underline"
+                >
                   Chỉnh sửa
                 </Link>
               )}

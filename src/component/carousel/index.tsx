@@ -49,6 +49,9 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts, images, load
             default: return 'Chưa xác định';
         }
     };
+    const handleOnClick = (postId: string) => {
+        navigate(`/home/post/${postId}`);
+    };
 
     const next = () => carouselRef.current?.next();
     const previous = () => carouselRef.current?.prev();
@@ -108,9 +111,14 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts, images, load
                                         <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
                                             Chỗ trống: {post.currentSlot}/{post.totalSlot}
                                         </span>
-                                        <Button type="primary" className="bg-blue-600 hover:bg-blue-700">
+                                        <Button
+                                            type="primary"
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                            onClick={() => handleOnClick(post.postId)}
+                                        >
                                             Xem chi tiết
                                         </Button>
+
                                     </div>
                                 </div>
                             </div>

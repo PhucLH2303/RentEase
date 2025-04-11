@@ -69,6 +69,17 @@ interface ApartmentImages {
   }[];
 }
 
+interface ApartmentUtility {
+  id: number;
+  aptId: string;
+  utilityId: number;
+  note: string;
+  createdAt: string;
+  updatedAt: string | null;
+  deletedAt: string | null;
+  status: null | boolean;
+}
+
 interface ApiResponse<T> {
   statusCode: number;
   message: string;
@@ -95,6 +106,7 @@ const ApartmentDetailPage: React.FC = () => {
   const { aptId } = useParams<{ aptId: string }>();
   const [apartmentDetail, setApartmentDetail] = useState<ApartmentDetail | null>(null);
   const [apartmentImages, setApartmentImages] = useState<ApartmentImages | null>(null);
+  const [apartmentUtilities, setApartmentUtilities] = useState<ApartmentUtility[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [likeLoading, setLikeLoading] = useState<boolean>(false);
@@ -121,6 +133,11 @@ const ApartmentDetailPage: React.FC = () => {
             },
           }
         );
+
+        if (!detailResponse.ok) {
+          throw new Error(`Failed to fetch apartment details: ${detailResponse.status}`);
+        }
+
         const detailData: ApiResponse<ApartmentDetail> = await detailResponse.json();
 
         const imagesResponse = await fetch(
@@ -160,9 +177,15 @@ const ApartmentDetailPage: React.FC = () => {
   }, [aptId]);
 
   const checkLikeStatus = async (aptId: string, token: string | null) => {
+    if (!token) {
+      // If user is not logged in, they haven't liked anything
+      setIsLiked(false);
+      return;
+    }
+
     try {
       const response = await fetch(
-        `https://renteasebe.io.vn/api/AccountLikedApt/Check-Like?aptId=${aptId}`,
+        `https://renteasebe.io.vn/api/AccountLikedApt/GetByUserId`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -208,12 +231,25 @@ const ApartmentDetailPage: React.FC = () => {
         }
       );
 
-      const data = await response.json();
-      if (data.statusCode === 200) {
-        setIsLiked(true);
-        message.success("Đã thêm vào danh sách yêu thích");
-      } else {
-        message.error(data.message || "Không thể thêm vào danh sách yêu thích");
+      if (!response.ok) {
+        throw new Error(`Failed to like apartment: ${response.status}`);
+      }
+
+      try {
+        const data = await response.json();
+        if (data.statusCode === 200) {
+          setIsLiked(true);
+          message.success("Đã thêm vào danh sách yêu thích");
+        } else {
+          message.error(data.message || "Không thể thêm vào danh sách yêu thích");
+        }
+      } catch (parseError) {
+        console.error("Error parsing like response:", parseError);
+        // Assume success if we can't parse the response but got a 200 OK
+        if (response.ok) {
+          setIsLiked(true);
+          message.success("Đã thêm vào danh sách yêu thích");
+        }
       }
     } catch (error) {
       console.error("Error liking apartment:", error);
@@ -248,12 +284,25 @@ const ApartmentDetailPage: React.FC = () => {
         }
       );
 
-      const data = await response.json();
-      if (data.statusCode === 200) {
-        setIsLiked(false);
-        message.success("Đã xóa khỏi danh sách yêu thích");
-      } else {
-        message.error(data.message || "Không thể xóa khỏi danh sách yêu thích");
+      if (!response.ok) {
+        throw new Error(`Failed to unlike apartment: ${response.status}`);
+      }
+
+      try {
+        const data = await response.json();
+        if (data.statusCode === 200) {
+          setIsLiked(false);
+          message.success("Đã xóa khỏi danh sách yêu thích");
+        } else {
+          message.error(data.message || "Không thể xóa khỏi danh sách yêu thích");
+        }
+      } catch (parseError) {
+        console.error("Error parsing unlike response:", parseError);
+        // Assume success if we can't parse the response but got a 200 OK
+        if (response.ok) {
+          setIsLiked(false);
+          message.success("Đã xóa khỏi danh sách yêu thích");
+        }
       }
     } catch (error) {
       console.error("Error unliking apartment:", error);
@@ -271,6 +320,12 @@ const ApartmentDetailPage: React.FC = () => {
   const openMapsLink = () => {
     if (apartmentDetail?.addressLink) {
       window.open(apartmentDetail.addressLink, "_blank");
+    } else if (apartmentDetail?.address) {
+      // Fallback to using Google Maps with address
+      const encodedAddress = encodeURIComponent(apartmentDetail.address);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, "_blank");
+    } else {
+      message.warning("Không có thông tin địa chỉ");
     }
   };
 
@@ -359,6 +414,8 @@ const ApartmentDetailPage: React.FC = () => {
   const emailOwner = () => {
     if (apartmentDetail?.ownerEmail) {
       window.location.href = `mailto:${apartmentDetail.ownerEmail}`;
+    } else {
+      message.warning("Không có thông tin email");
     }
   };
 
@@ -454,6 +511,11 @@ const ApartmentDetailPage: React.FC = () => {
                       src={`${imageBaseUrl}${image.imageUrl}`}
                       alt={`${apartmentDetail.name} - Hình ${image.id}`}
                       className="w-full h-full object-cover rounded"
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.src = "https://via.placeholder.com/800x600?text=Không+tải+được+hình";
+                      }}
                     />
                   </div>
                 ))}
@@ -481,8 +543,26 @@ const ApartmentDetailPage: React.FC = () => {
               </Descriptions.Item>
             </Descriptions>
 
+            {apartmentUtilities.length > 0 && (
+              <>
+                <Divider orientation="left">Tiện ích</Divider>
+                <Row gutter={[16, 16]}>
+                  {apartmentUtilities.map((utility) => (
+                    <Col xs={12} sm={8} md={6} key={utility.id}>
+                      <Card size="small" className="text-center h-full">
+                        <Space direction="vertical" size="small">
+                          <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
+                          <Text strong>{utility.note}</Text>
+                        </Space>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              </>
+            )}
+
             <Divider orientation="left">Mô tả</Divider>
-            <Paragraph>{apartmentDetail.note}</Paragraph>
+            <Paragraph>{apartmentDetail.note || "Không có mô tả chi tiết"}</Paragraph>
           </Card>
         </Col>
 
@@ -507,6 +587,20 @@ const ApartmentDetailPage: React.FC = () => {
               <Text className="ml-2">{apartmentDetail.rating || 0}/5</Text>
             </div>
           </Card>
+
+          {apartmentUtilities.length > 0 && (
+            <Card bordered={false} className="mb-6 shadow">
+              <Title level={4}>Tiện ích có sẵn</Title>
+              <Space direction="vertical" size="small" className="w-full">
+                {apartmentUtilities.map((utility) => (
+                  <div key={utility.id} className="flex items-center">
+                    <CheckCircleOutlined style={{ color: '#52c41a', marginRight: '8px' }} />
+                    <Text>{utility.note}</Text>
+                  </div>
+                ))}
+              </Space>
+            </Card>
+          )}
 
           <Card bordered={false} className="mb-6 shadow">
             <Title level={4}>Thông tin liên hệ</Title>

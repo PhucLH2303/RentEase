@@ -7,6 +7,7 @@ import CategoryShowcase from "../component/category";
 import EnhancedPropertyGrid from "../component/grid";
 import StatisticsAndTestimonials from "../component/review/index";
 import axios from "axios";
+import EnhancedPropertyGrid1 from "../component/findfriend";
 
 const { Option } = Select;
 
@@ -249,6 +250,20 @@ const Home: React.FC = () => {
         <div className="p-8">
           <h2 className="text-2xl font-bold mb-6 text-gray-800">🏡 Căn hộ cho thuê</h2>
           <EnhancedPropertyGrid posts={filteredPosts} categories={categories} images={images} />
+        </div>
+      )}
+      {loading ? (
+        <div className="flex justify-center items-center h-full w-full">
+          <Skeleton active className="w-full h-full max-w-5xl rounded-xl" />
+        </div>
+      ) : error ? (
+        <div className="text-center text-red-600">
+          <p>{error}</p>
+        </div>
+      ) : (
+        <div className="p-8">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800">🏡 TÌm bạn cùng phòng</h2>
+          <EnhancedPropertyGrid1 posts={filteredPosts} categories={categories} images={images} />
         </div>
       )}
 
