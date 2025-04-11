@@ -7,7 +7,7 @@ import {
     Statistic,
     Space,
     Spin,
-    DatePicker,
+    // DatePicker,
     Select
 } from 'antd';
 import {
@@ -15,13 +15,13 @@ import {
     ShoppingCartOutlined,
     UserOutlined
 } from '@ant-design/icons';
-import { Area, Pie } from '@ant-design/plots';
+import { Pie } from '@ant-design/plots';
 import axios from 'axios';
 import moment from 'moment';
 
 const { Header, Content } = Layout;
 const { Option } = Select;
-const { RangePicker } = DatePicker;
+// const { RangePicker } = DatePicker;
 
 interface Order {
     orderId: string;
@@ -196,32 +196,32 @@ const AdminDashboard: React.FC = () => {
         }));
     }, [accounts]);
 
-    // Chart data preparation for revenue over time (last 7 days)
-    const revenueData = React.useMemo(() => {
-        const last7Days = Array.from({ length: 7 }, (_, i) => {
-            const date = new Date();
-            date.setDate(date.getDate() - (6 - i));
-            return {
-                date: moment(date).format('YYYY-MM-DD'),
-                revenue: 0,
-            };
-        });
+    // // Chart data preparation for revenue over time (last 7 days)
+    // const revenueData = React.useMemo(() => {
+    //     const last7Days = Array.from({ length: 7 }, (_, i) => {
+    //         const date = new Date();
+    //         date.setDate(date.getDate() - (6 - i));
+    //         return {
+    //             date: moment(date).format('YYYY-MM-DD'),
+    //             revenue: 0,
+    //         };
+    //     });
 
-        orders.forEach(order => {
-            if (order.paymentStatusId === 2 || order.paymentStatusId === 3) {
-                const orderDate = moment(order.createdAt).format('YYYY-MM-DD');
-                const dayData = last7Days.find(day => day.date === orderDate);
-                if (dayData) {
-                    dayData.revenue += order.totalAmount;
-                }
-            }
-        });
+    //     orders.forEach(order => {
+    //         if (order.paymentStatusId === 2 || order.paymentStatusId === 3) {
+    //             const orderDate = moment(order.createdAt).format('YYYY-MM-DD');
+    //             const dayData = last7Days.find(day => day.date === orderDate);
+    //             if (dayData) {
+    //                 dayData.revenue += order.totalAmount;
+    //             }
+    //         }
+    //     });
 
-        return last7Days.map(day => ({
-            date: moment(day.date).format('DD/MM'),
-            revenue: day.revenue,
-        }));
-    }, [orders]);
+    //     return last7Days.map(day => ({
+    //         date: moment(day.date).format('DD/MM'),
+    //         revenue: day.revenue,
+    //     }));
+    // }, [orders]);
 
     // Order columns for table
     const orderColumns = [
@@ -383,28 +383,6 @@ const AdminDashboard: React.FC = () => {
                                 />
                             </Card>
                         </div>
-
-                        {/* Revenue Chart */}
-                        <Card
-                            title="Doanh thu 7 ngày gần đây"
-                            className="mb-6 shadow-sm"
-                            extra={
-                                <RangePicker
-                                    format="DD/MM/YYYY"
-                                    className="w-52"
-                                />
-                            }
-                        >
-                            <Area
-                                data={revenueData}
-                                xField="date"
-                                yField="revenue"
-                                smooth
-                                areaStyle={{
-                                    fill: 'l(270) 0:#ffffff 0.5:#7ec2f3 1:#1890ff',
-                                }}
-                            />
-                        </Card>
 
                         {/* Charts Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

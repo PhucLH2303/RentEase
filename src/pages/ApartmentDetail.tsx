@@ -13,7 +13,7 @@ import {
   Skeleton,
   Row,
   Col,
-  message,
+  message
 } from "antd";
 import {
   HomeOutlined,
@@ -26,11 +26,10 @@ import {
   TeamOutlined,
   TagsOutlined,
   InfoCircleOutlined,
-  CheckCircleOutlined,
   HeartOutlined,
   HeartFilled,
+  CheckCircleOutlined
 } from "@ant-design/icons";
-import ChatPopup from "../component/chat/index";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -94,13 +93,13 @@ const categoryMap: Record<number, string> = {
   1: "Chung cư",
   2: "Nhà nguyên căn",
   3: "Nhà trọ",
-  4: "Căn hộ dịch vụ",
+  4: "Căn hộ dịch vụ"
 };
 
 const statusMap: Record<number, { text: string; color: string }> = {
   1: { text: "Đang cho thuê", color: "green" },
   2: { text: "Đã cho thuê", color: "orange" },
-  3: { text: "Ngừng cho thuê", color: "red" },
+  3: { text: "Ngừng cho thuê", color: "red" }
 };
 
 const ApartmentDetailPage: React.FC = () => {
@@ -111,8 +110,6 @@ const ApartmentDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [likeLoading, setLikeLoading] = useState<boolean>(false);
-  const [chatVisible, setChatVisible] = useState<boolean>(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchApartmentDetails = async () => {
@@ -126,6 +123,7 @@ const ApartmentDetailPage: React.FC = () => {
       }
 
       try {
+        // Fetch apartment details
         const detailResponse = await fetch(
           `https://renteasebe.io.vn/api/Apt/GetById?aptId=${aptId}`,
           {
@@ -141,6 +139,7 @@ const ApartmentDetailPage: React.FC = () => {
 
         const detailData: ApiResponse<ApartmentDetail> = await detailResponse.json();
 
+        // Fetch apartment images
         const imagesResponse = await fetch(
           `https://renteasebe.io.vn/api/AptImage/GetByAptId?aptId=${aptId}`,
           {
@@ -149,7 +148,50 @@ const ApartmentDetailPage: React.FC = () => {
             },
           }
         );
-        const imagesData: ApiResponse<ApartmentImages> = await imagesResponse.json();
+
+        if (!imagesResponse.ok) {
+          console.warn(`Failed to fetch apartment images: ${imagesResponse.status}`);
+        } else {
+          const imagesData: ApiResponse<ApartmentImages> = await imagesResponse.json();
+
+          if (imagesData.statusCode === 200) {
+            setApartmentImages(imagesData.data);
+          } else {
+            console.warn("Failed to get apartment images:", imagesData.message);
+          }
+        }
+
+        // Fetch utilities using POST with proper parameters
+        try {
+          const utilitiesResponse = await fetch(
+            `https://renteasebe.io.vn/api/AptUtility/GetByAptId`,
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                aptId: aptId,
+                page: 1,
+                pageSize: 10
+              })
+            }
+          );
+
+          if (!utilitiesResponse.ok) {
+            console.warn(`POST utilities failed with status: ${utilitiesResponse.status}`);
+          } else {
+            const utilitiesData = await utilitiesResponse.json();
+            if (utilitiesData.statusCode === 200) {
+              setApartmentUtilities(utilitiesData.data);
+            } else {
+              console.warn("Failed to get utilities data:", utilitiesData.message);
+            }
+          }
+        } catch (utilitiesError) {
+          console.error("Error fetching utilities:", utilitiesError);
+        }
 
         if (detailData.statusCode === 200) {
           setApartmentDetail(detailData.data);
@@ -157,12 +199,7 @@ const ApartmentDetailPage: React.FC = () => {
           message.error("Không thể tải thông tin căn hộ");
         }
 
-        if (imagesData.statusCode === 200) {
-          setApartmentImages(imagesData.data);
-        } else {
-          message.error("Không thể tải hình ảnh căn hộ");
-        }
-
+        // Check if apartment is liked by current user
         await checkLikeStatus(aptId, token);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -174,9 +211,13 @@ const ApartmentDetailPage: React.FC = () => {
 
     if (aptId) {
       fetchApartmentDetails();
+    } else {
+      message.error("Không tìm thấy mã căn hộ");
+      setLoading(false);
     }
   }, [aptId]);
 
+  // Function to check if user has liked this apartment
   const checkLikeStatus = async (aptId: string, token: string | null) => {
     if (!token) {
       // If user is not logged in, they haven't liked anything
@@ -185,8 +226,7 @@ const ApartmentDetailPage: React.FC = () => {
     }
 
     try {
-      // This is an example, you may need to implement the actual API endpoint
-      // to check if an apartment is liked by the current user
+      // First try an API that returns the user's liked apartments
       const response = await fetch(
         `https://renteasebe.io.vn/api/AccountLikedApt/GetByUserId`,
         {
@@ -196,9 +236,23 @@ const ApartmentDetailPage: React.FC = () => {
         }
       );
 
-      const data = await response.json();
-      if (data.statusCode === 200) {
-        setIsLiked(data.data);
+      if (!response.ok) {
+        console.warn(`Failed to fetch liked apartments: ${response.status}`);
+        setIsLiked(false);
+        return;
+      }
+
+      try {
+        const likedApts = await response.json();
+        if (likedApts.statusCode === 200) {
+          const isAptLiked = likedApts.data.some((apt: any) => apt.aptId === aptId);
+          setIsLiked(isAptLiked);
+        } else {
+          setIsLiked(false);
+        }
+      } catch (parseError) {
+        console.error("Error parsing liked apartments response:", parseError);
+        setIsLiked(false);
       }
     } catch (error) {
       console.error("Error checking like status:", error);
@@ -229,7 +283,7 @@ const ApartmentDetailPage: React.FC = () => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            aptId: aptId,
+            aptId: aptId
           }),
         }
       );
@@ -265,7 +319,6 @@ const ApartmentDetailPage: React.FC = () => {
   const handleUnlikeApartment = async () => {
     const token = localStorage.getItem("accessToken");
 
-    // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
     if (!token || !aptId) {
       token ? message.error("Mã căn hộ không hợp lệ") : message.warning("Vui lòng đăng nhập để thực hiện");
       return;
@@ -331,6 +384,8 @@ const ApartmentDetailPage: React.FC = () => {
   const contactOwner = () => {
     if (apartmentDetail?.ownerPhone) {
       window.location.href = `tel:${apartmentDetail.ownerPhone}`;
+    } else {
+      message.warning("Không có thông tin số điện thoại");
     }
   };
 
@@ -354,9 +409,7 @@ const ApartmentDetailPage: React.FC = () => {
     return (
       <div className="p-6 text-center">
         <Title level={3}>Không tìm thấy thông tin căn hộ</Title>
-        <Button type="primary" onClick={() => window.history.back()}>
-          Quay lại
-        </Button>
+        <Button type="primary" onClick={() => window.history.back()}>Quay lại</Button>
       </div>
     );
   }
@@ -370,10 +423,7 @@ const ApartmentDetailPage: React.FC = () => {
           <Col xs={24} md={16}>
             <Title level={2}>{apartmentDetail.name}</Title>
             <Space className="mb-4">
-              <Tag
-                color={statusMap[apartmentDetail.aptStatusId]?.color || "blue"}
-                icon={<TagsOutlined />}
-              >
+              <Tag color={statusMap[apartmentDetail.aptStatusId]?.color || "blue"} icon={<TagsOutlined />}>
                 {statusMap[apartmentDetail.aptStatusId]?.text || "Không xác định"}
               </Tag>
               <Tag color="blue" icon={<HomeOutlined />}>
@@ -401,10 +451,17 @@ const ApartmentDetailPage: React.FC = () => {
                   <UserOutlined /> {apartmentDetail.ownerName}
                 </Paragraph>
                 <Space>
-                  <Button type="primary" icon={<PhoneOutlined />} onClick={contactOwner}>
+                  <Button
+                    type="primary"
+                    icon={<PhoneOutlined />}
+                    onClick={contactOwner}
+                  >
                     Gọi điện
                   </Button>
-                  <Button icon={<MailOutlined />} onClick={emailOwner}>
+                  <Button
+                    icon={<MailOutlined />}
+                    onClick={emailOwner}
+                  >
                     Email
                   </Button>
                   <Button
@@ -492,9 +549,7 @@ const ApartmentDetailPage: React.FC = () => {
         <Col xs={24} md={8}>
           <Card bordered={false} className="mb-6 shadow">
             <div className="flex justify-between items-center mb-2">
-              <Title level={4} className="m-0">
-                Đánh giá
-              </Title>
+              <Title level={4} className="m-0">Đánh giá</Title>
               <Button
                 type={isLiked ? "primary" : "default"}
                 danger={isLiked}
@@ -560,14 +615,6 @@ const ApartmentDetailPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
-
-      {chatVisible && conversationId && (
-        <ChatPopup
-          visible={chatVisible}
-          onClose={() => setChatVisible(false)}
-          conversationId={conversationId}
-        />
-      )}
     </div>
   );
 };

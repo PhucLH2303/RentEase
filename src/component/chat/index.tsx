@@ -30,7 +30,7 @@ interface ApiResponse<T> {
 interface ChatPopupProps {
     visible: boolean;
     onClose: () => void;
-    conversationId: string;
+    conversationId: string | null; // Updated to allow null
 }
 
 const ChatPopup: React.FC<ChatPopupProps> = ({ visible, onClose, conversationId }) => {
@@ -49,10 +49,14 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ visible, onClose, conversationId 
         if (visible && conversationId && token) {
             fetchConversationDetails();
             fetchMessages();
+        } else if (visible && !conversationId) {
+            message.error("Không có ID cuộc trò chuyện để tải tin nhắn");
         }
     }, [visible, conversationId, token]);
 
     const fetchConversationDetails = async () => {
+        if (!conversationId) return; // Additional safeguard
+
         try {
             const response = await fetch(
                 `https://renteasebe.io.vn/api/Conversation/GetById?id=${conversationId}`,
@@ -66,7 +70,6 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ visible, onClose, conversationId 
             console.log("GET /api/Conversation/GetById response:", data);
             if (data.statusCode === 200) {
                 const conversation = data.data;
-                // Determine accountId2 (the other user)
                 const otherAccountId =
                     conversation.accountId1 === accountId
                         ? conversation.accountId2
@@ -82,6 +85,8 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ visible, onClose, conversationId 
     };
 
     const fetchMessages = async () => {
+        if (!conversationId) return; // Additional safeguard
+
         setLoading(true);
         try {
             const response = await fetch(
@@ -110,6 +115,11 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ visible, onClose, conversationId 
     const handleSendMessage = async () => {
         if (!newMessage.trim()) {
             message.warning("Vui lòng nhập tin nhắn");
+            return;
+        }
+
+        if (!conversationId) {
+            message.error("Không có ID cuộc trò chuyện để gửi tin nhắn");
             return;
         }
 
@@ -176,7 +186,7 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ visible, onClose, conversationId 
                                                     ? "#1890ff"
                                                     : item.senderId === accountId2
                                                         ? "white"
-                                                        : "#f0f0f0", // Fallback for unexpected senderId
+                                                        : "#f0f0f0",
                                             color: item.senderId === accountId ? "white" : "black",
                                             boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
                                         }}
