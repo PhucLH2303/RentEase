@@ -3,9 +3,8 @@ import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
     UserOutlined,
-    SettingOutlined,
     AppstoreOutlined,
-    LogoutOutlined,
+    LogoutOutlined
 } from "@ant-design/icons";
 import { Layout, Menu, Button, theme, Avatar, Dropdown, message } from "antd";
 import { useNavigate } from "react-router-dom";
@@ -50,8 +49,6 @@ const Dashboard: React.FC = () => {
     const userMenu = (
         <Menu
             items={[
-                { key: "profile", icon: <UserOutlined />, label: "Profile" },
-                { key: "settings", icon: <SettingOutlined />, label: "Settings" },
                 { key: "logout", icon: <LogoutOutlined />, label: "Logout", onClick: handleLogout },
             ]}
         />
@@ -72,15 +69,6 @@ const Dashboard: React.FC = () => {
                 >
                     <Menu.Item key="dashboard" icon={<AppstoreOutlined />}>
                         Dashboard
-                    </Menu.Item>
-                    <Menu.Item key="users" icon={<UserOutlined />}>
-                        Users
-                    </Menu.Item>
-                    <Menu.Item key="manage" icon={<SettingOutlined />}>
-                        Manage
-                    </Menu.Item>
-                    <Menu.Item key="settings" icon={<SettingOutlined />}>
-                        Settings
                     </Menu.Item>
                 </Menu>
             </Sider>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Select, Button, Skeleton, notification } from "antd";
+import { Select, Button, Skeleton } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import Carousel from "../component/carousel/index";
 import CategoryShowcase from "../component/category";
@@ -69,8 +69,8 @@ const Home: React.FC = () => {
   const [images, setImages] = useState<{ [key: string]: string }>({});
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [carouselLoading, setCarouselLoading] = useState<boolean>(true); // Loading cho Carousel
+  const [gridLoading, setGridLoading] = useState<boolean>(true); // Loading cho Grid
   const [filters, setFilters] = useState<{
     location: string;
     duration: string;
@@ -85,99 +85,117 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const API_BASE_URL = "https://renteasebe.io.vn";
 
+  // Giai đoạn 1: Tải dữ liệu cho Carousel (ưu tiên đầu trang)
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCarouselData = async () => {
       const token = localStorage.getItem("accessToken");
       if (!token) {
         navigate("/", { state: { from: "/home" } });
         return;
       }
 
-      setLoading(true);
-      setError(null);
+      setCarouselLoading(true);
 
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const baseUrl = API_BASE_URL;
 
-        // Fetch posts
-        const postsResponse = await axios.get<{ data: Post[] }>(`${baseUrl}/api/Post/GetAll`, { headers });
+        // Chỉ tải posts trước để hiển thị Carousel
+        const postsResponse = await axios.get<{ data: Post[] }>(`${API_BASE_URL}/api/Post/GetAll`, { headers });
         const fetchedPosts = postsResponse.data.data || [];
         setPosts(fetchedPosts);
 
-        // Fetch statuses
-        const statusResponse = await axios.get<{ data: Status[] }>(`${baseUrl}/api/AptStatus/GetAll`, { headers });
-        setStatuses(statusResponse.data.data || []);
-
-        // Fetch categories
-        const categoryResponse = await axios.get<{ data: Category[] }>(`${baseUrl}/api/AptCategory/GetAll`, { headers });
-        setCategories(categoryResponse.data.data || []);
-
-        // Fetch images using aptId from posts
-        const imagePromises = fetchedPosts.map(post =>
-          axios.get(`${baseUrl}/api/AptImage/GetByAptId?aptId=${post.aptId}`, { headers })
-            .catch(error => {
-              console.error(`Failed to fetch image for aptId ${post.aptId}:`, error.response?.status);
-              return { data: { data: { aptId: post.aptId, images: [] } } };
-            })
+        // Tải hình ảnh cho posts
+        const uniqueAptIds = Array.from(new Set(fetchedPosts.map(post => post.aptId)));
+        const imagePromises = uniqueAptIds.map(aptId =>
+          axios.get(`${API_BASE_URL}/api/AptImage/GetByAptId?aptId=${aptId}`, { headers }).catch(() => ({
+            data: { data: { aptId, images: [] } },
+          }))
         );
-
         const imageResponses = await Promise.all(imagePromises);
         const imageMap = imageResponses.reduce((acc, response) => {
           const imageData: ImageData = response.data.data;
-          if (imageData && imageData.images && imageData.images.length > 0) {
-            acc[imageData.aptId] = `${baseUrl}${imageData.images[0].imageUrl}`;
+          if (imageData?.images?.length > 0) {
+            acc[imageData.aptId] = `${API_BASE_URL}${imageData.images[0].imageUrl}`;
           }
           return acc;
         }, {} as { [key: string]: string });
 
         setImages(imageMap);
-
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown error";
-        setError(`Failed to load data: ${errorMessage}`);
-        notification.error({
-          message: "Error loading data",
-          description: errorMessage,
-          placement: "topRight",
-        });
+        console.error("Error loading carousel data:", err);
       } finally {
-        setLoading(false);
+        setCarouselLoading(false);
       }
     };
-    fetchData();
+
+    fetchCarouselData();
   }, [navigate]);
 
+  // Giai đoạn 2: Tải dữ liệu cho phần còn lại (sau khi Carousel sẵn sàng)
+  useEffect(() => {
+    const fetchRemainingData = async () => {
+      if (carouselLoading) return; // Chờ Carousel load xong
+
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      setGridLoading(true);
+
+      try {
+        const headers = { Authorization: `Bearer ${token}` };
+
+        // Tải statuses và categories
+        const [statusResponse, categoryResponse] = await Promise.all([
+          axios.get<{ data: Status[] }>(`${API_BASE_URL}/api/AptStatus/GetAll`, { headers }),
+          axios.get<{ data: Category[] }>(`${API_BASE_URL}/api/AptCategory/GetAll`, { headers }),
+        ]);
+
+        setStatuses(statusResponse.data.data || []);
+        setCategories(categoryResponse.data.data || []);
+      } catch (err) {
+        console.error("Error loading remaining data:", err);
+      } finally {
+        setGridLoading(false);
+      }
+    };
+
+    fetchRemainingData();
+  }, [carouselLoading, navigate]);
+
   const handleFilterChange = (key: string, value: string | null) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const filteredPosts = posts.filter((post) => {
-    return (
-      (!filters.category || post.postCategoryId === Number(filters.category)) &&
-      (!filters.status || post.approveStatusId === Number(filters.status))
-    );
-  });
+  const filteredPosts = posts.filter(post => (
+    (!filters.category || post.postCategoryId === Number(filters.category)) &&
+    (!filters.status || post.approveStatusId === Number(filters.status))
+  ));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-gray-100 mx-4">
-      <Carousel posts={posts} />
-      <CategoryShowcase categories={categories} />
-
-      {loading ? (
-        <div className="flex justify-center items-center h-full w-full">
-          <Skeleton active className="w-full h-full max-w-5xl rounded-xl" />
-        </div>
-      ) : error ? (
-        <div className="text-center text-red-600">
-          <p>{error}</p>
+      {/* Phần Carousel (đầu trang) */}
+      {carouselLoading ? (
+        <div className="p-8">
+          <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       ) : (
-        <div className="flex flex-col md:flex-row items-center justify-center bg-white shadow-xl p-6 rounded-xl mx-auto mt-8 w-11/12 max-w-5xl transition-all duration-300 hover:shadow-2xl">
+        <Carousel posts={posts} images={images} loading={carouselLoading} />
+      )}
+
+      {/* Phần CategoryShowcase */}
+      {carouselLoading ? null : <CategoryShowcase categories={categories} />}
+
+      {/* Phần Filter */}
+      {gridLoading ? (
+        <div className="flex justify-center items-center mt-8">
+          <Skeleton.Input active style={{ width: "80%", height: "60px" }} />
+        </div>
+      ) : (
+        <div className="flex flex-col md:flex-row items-center justify-center bg-white shadow-xl p-6 rounded-xl mx-auto mt-8 w-11/12 max-w-5xl">
           <Select
             value={filters.location}
             className="w-full md:w-1/4 mb-4 md:mb-0 md:mr-4"
-            onChange={(value) => handleFilterChange("location", value)}
+            onChange={value => handleFilterChange("location", value)}
           >
             <Option value="hcm">Hồ Chí Minh</Option>
             <Option value="hn">Hà Nội</Option>
@@ -185,7 +203,7 @@ const Home: React.FC = () => {
           <Select
             value={filters.duration}
             className="w-full md:w-1/4 mb-4 md:mb-0 md:mr-4"
-            onChange={(value) => handleFilterChange("duration", value)}
+            onChange={value => handleFilterChange("duration", value)}
           >
             <Option value="short">Ngắn hạn</Option>
             <Option value="long">Dài hạn</Option>
@@ -193,27 +211,23 @@ const Home: React.FC = () => {
           <Select
             placeholder="Loại căn hộ"
             className="w-full md:w-1/4 mb-4 md:mb-0 md:mr-4"
-            onChange={(value) => handleFilterChange("category", value)}
+            onChange={value => handleFilterChange("category", value)}
             allowClear
             value={filters.category}
           >
-            {categories.map((cat) => (
-              <Option key={cat.id} value={cat.id.toString()}>
-                {cat.note}
-              </Option>
+            {categories.map(cat => (
+              <Option key={cat.id} value={cat.id.toString()}>{cat.note}</Option>
             ))}
           </Select>
           <Select
             placeholder="Trạng thái"
             className="w-full md:w-1/4 mb-4 md:mb-0 md:mr-4"
-            onChange={(value) => handleFilterChange("status", value)}
+            onChange={value => handleFilterChange("status", value)}
             allowClear
             value={filters.status}
           >
-            {statuses.map((status) => (
-              <Option key={status.id} value={status.id.toString()}>
-                {status.statusName}
-              </Option>
+            {statuses.map(status => (
+              <Option key={status.id} value={status.id.toString()}>{status.statusName}</Option>
             ))}
           </Select>
           <Button
@@ -226,13 +240,10 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {loading ? (
-        <div className="flex justify-center items-center h-full w-full">
-          <Skeleton active className="w-full h-full max-w-5xl rounded-xl" />
-        </div>
-      ) : error ? (
-        <div className="text-center text-red-600">
-          <p>{error}</p>
+      {/* Phần Grid */}
+      {gridLoading ? (
+        <div className="p-8">
+          <Skeleton active paragraph={{ rows: 10 }} />
         </div>
       ) : (
         <div className="p-8">
@@ -241,13 +252,10 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {loading ? (
-        <div className="flex justify-center items-center h-full w-full">
-          <Skeleton active className="w-full h-full max-w-5xl rounded-xl" />
-        </div>
-      ) : error ? (
-        <div className="text-center text-red-600">
-          <p>{error}</p>
+      {/* Phần StatisticsAndTestimonials */}
+      {gridLoading ? (
+        <div className="p-8">
+          <Skeleton active paragraph={{ rows: 6 }} />
         </div>
       ) : (
         <div className="p-8">
@@ -259,6 +267,3 @@ const Home: React.FC = () => {
 };
 
 export default Home;
-
-
-

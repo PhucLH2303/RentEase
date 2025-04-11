@@ -1,34 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { 
-  Card, 
-  Carousel, 
-  Descriptions, 
-  Divider, 
-  Typography, 
-  Tag, 
-  Space, 
-  Button, 
-  Rate, 
+import {
+  Card,
+  Carousel,
+  Descriptions,
+  Divider,
+  Typography,
+  Tag,
+  Space,
+  Button,
+  Rate,
   Skeleton,
   Row,
   Col,
-  message 
+  message,
 } from "antd";
-import { 
-  HomeOutlined, 
-  UserOutlined, 
-  PhoneOutlined, 
-  MailOutlined, 
-  EnvironmentOutlined, 
+import {
+  HomeOutlined,
+  UserOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  EnvironmentOutlined,
   CalendarOutlined,
   AreaChartOutlined,
   TeamOutlined,
   TagsOutlined,
   InfoCircleOutlined,
   HeartOutlined,
-  HeartFilled
+  HeartFilled,
 } from "@ant-design/icons";
+import ChatPopup from "../component/chat/index";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -81,13 +82,13 @@ const categoryMap: Record<number, string> = {
   1: "Chung cư",
   2: "Nhà nguyên căn",
   3: "Nhà trọ",
-  4: "Căn hộ dịch vụ"
+  4: "Căn hộ dịch vụ",
 };
 
 const statusMap: Record<number, { text: string; color: string }> = {
   1: { text: "Đang cho thuê", color: "green" },
   2: { text: "Đã cho thuê", color: "orange" },
-  3: { text: "Ngừng cho thuê", color: "red" }
+  3: { text: "Ngừng cho thuê", color: "red" },
 };
 
 const ApartmentDetailPage: React.FC = () => {
@@ -97,21 +98,21 @@ const ApartmentDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [likeLoading, setLikeLoading] = useState<boolean>(false);
+  const [chatVisible, setChatVisible] = useState<boolean>(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchApartmentDetails = async () => {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
-      
-      // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
+
       if (!aptId) {
         message.error("Mã căn hộ không hợp lệ");
         setLoading(false);
         return;
       }
-  
+
       try {
-        // Fetch apartment details
         const detailResponse = await fetch(
           `https://renteasebe.io.vn/api/Apt/GetById?aptId=${aptId}`,
           {
@@ -121,8 +122,7 @@ const ApartmentDetailPage: React.FC = () => {
           }
         );
         const detailData: ApiResponse<ApartmentDetail> = await detailResponse.json();
-  
-        // Fetch apartment images
+
         const imagesResponse = await fetch(
           `https://renteasebe.io.vn/api/AptImage/GetByAptId?aptId=${aptId}`,
           {
@@ -132,20 +132,19 @@ const ApartmentDetailPage: React.FC = () => {
           }
         );
         const imagesData: ApiResponse<ApartmentImages> = await imagesResponse.json();
-  
+
         if (detailData.statusCode === 200) {
           setApartmentDetail(detailData.data);
         } else {
           message.error("Không thể tải thông tin căn hộ");
         }
-  
+
         if (imagesData.statusCode === 200) {
           setApartmentImages(imagesData.data);
         } else {
           message.error("Không thể tải hình ảnh căn hộ");
         }
 
-        // Check if apartment is liked by current user
         await checkLikeStatus(aptId, token);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -154,20 +153,14 @@ const ApartmentDetailPage: React.FC = () => {
         setLoading(false);
       }
     };
-  
+
     if (aptId) {
       fetchApartmentDetails();
-    } else {
-      message.error("Không tìm thấy mã căn hộ");
-      setLoading(false);
     }
   }, [aptId]);
-  
-  // Function to check if user has liked this apartment
+
   const checkLikeStatus = async (aptId: string, token: string | null) => {
     try {
-      // This is an example, you may need to implement the actual API endpoint
-      // to check if an apartment is liked by the current user
       const response = await fetch(
         `https://renteasebe.io.vn/api/AccountLikedApt/Check-Like?aptId=${aptId}`,
         {
@@ -176,14 +169,13 @@ const ApartmentDetailPage: React.FC = () => {
           },
         }
       );
-      
+
       const data = await response.json();
       if (data.statusCode === 200) {
         setIsLiked(data.data);
       }
     } catch (error) {
       console.error("Error checking like status:", error);
-      // If the endpoint doesn't exist, we can default to not liked
       setIsLiked(false);
     }
   };
@@ -195,7 +187,6 @@ const ApartmentDetailPage: React.FC = () => {
       return;
     }
 
-    // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
     if (!aptId) {
       message.error("Mã căn hộ không hợp lệ");
       return;
@@ -212,7 +203,7 @@ const ApartmentDetailPage: React.FC = () => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            aptId: aptId
+            aptId: aptId,
           }),
         }
       );
@@ -234,16 +225,19 @@ const ApartmentDetailPage: React.FC = () => {
 
   const handleUnlikeApartment = async () => {
     const token = localStorage.getItem("accessToken");
-    
-    // Sửa lỗi: Kiểm tra aptId trước khi sử dụng
-    if (!token || !aptId) {
-      token ? message.error("Mã căn hộ không hợp lệ") : message.warning("Vui lòng đăng nhập để thực hiện");
+
+    if (!token) {
+      message.warning("Vui lòng đăng nhập để thực hiện");
+      return;
+    }
+
+    if (!aptId) {
+      message.error("Mã căn hộ không hợp lệ");
       return;
     }
 
     setLikeLoading(true);
     try {
-      // This assumes there's an API endpoint to remove a liked apartment
       const response = await fetch(
         `https://renteasebe.io.vn/api/AccountLikedApt/Remove-Like?aptId=${aptId}`,
         {
@@ -280,9 +274,85 @@ const ApartmentDetailPage: React.FC = () => {
     }
   };
 
-  const contactOwner = () => {
-    if (apartmentDetail?.ownerPhone) {
-      window.location.href = `tel:${apartmentDetail.ownerPhone}`;
+  const contactOwner = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      message.warning("Vui lòng đăng nhập để liên hệ");
+      return;
+    }
+
+    if (!apartmentDetail?.posterId) {
+      message.error("Không tìm thấy thông tin chủ nhà để liên hệ");
+      return;
+    }
+
+    try {
+      // First, try to fetch all conversations to check for an existing one
+      const allConversationsResponse = await fetch(
+        "https://renteasebe.io.vn/api/Conversation/GetAll?page=1&pageSize=10",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const allConversations: ApiResponse<
+        { id: string; accountId1: string; accountId2: string; createdAt: string }[]
+      > = await allConversationsResponse.json();
+      console.log("GET /api/Conversation/GetAll response:", allConversations);
+
+      let conversationId: string | null = null;
+
+      if (allConversations.statusCode === 200) {
+        // Filter conversations where posterId matches accountId1 or accountId2
+        const matchingConversations = allConversations.data.filter(
+          (conv) =>
+            conv.accountId2 === apartmentDetail.posterId ||
+            conv.accountId1 === apartmentDetail.posterId
+        );
+
+        // If there are matching conversations, select the most recent one
+        if (matchingConversations.length > 0) {
+          const mostRecentConversation = matchingConversations.reduce((latest, current) => {
+            return new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest;
+          });
+          conversationId = mostRecentConversation.id;
+        }
+      }
+
+      // If no matching conversation was found, create a new one
+      if (!conversationId) {
+        const createResponse = await fetch("https://renteasebe.io.vn/api/Conversation", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            accountIdReceive: apartmentDetail.posterId,
+          }),
+        });
+        const createData: ApiResponse<string> = await createResponse.json();
+        console.log("POST /api/Conversation response:", createData);
+
+        if (createData.statusCode === 200 && createData.data) {
+          conversationId = createData.data;
+        } else {
+          message.error("Không thể tạo cuộc trò chuyện");
+          return;
+        }
+      }
+
+      // Open the chat with the obtained conversationId
+      if (conversationId) {
+        setConversationId(conversationId);
+        setChatVisible(true);
+      } else {
+        message.error("Không thể mở cuộc trò chuyện");
+      }
+    } catch (error) {
+      console.error("Error in contactOwner:", error);
+      message.error("Đã xảy ra lỗi khi liên hệ");
     }
   };
 
@@ -304,7 +374,9 @@ const ApartmentDetailPage: React.FC = () => {
     return (
       <div className="p-6 text-center">
         <Title level={3}>Không tìm thấy thông tin căn hộ</Title>
-        <Button type="primary" onClick={() => window.history.back()}>Quay lại</Button>
+        <Button type="primary" onClick={() => window.history.back()}>
+          Quay lại
+        </Button>
       </div>
     );
   }
@@ -318,7 +390,10 @@ const ApartmentDetailPage: React.FC = () => {
           <Col xs={24} md={16}>
             <Title level={2}>{apartmentDetail.name}</Title>
             <Space className="mb-4">
-              <Tag color={statusMap[apartmentDetail.aptStatusId]?.color || "blue"} icon={<TagsOutlined />}>
+              <Tag
+                color={statusMap[apartmentDetail.aptStatusId]?.color || "blue"}
+                icon={<TagsOutlined />}
+              >
                 {statusMap[apartmentDetail.aptStatusId]?.text || "Không xác định"}
               </Tag>
               <Tag color="blue" icon={<HomeOutlined />}>
@@ -346,17 +421,10 @@ const ApartmentDetailPage: React.FC = () => {
                   <UserOutlined /> {apartmentDetail.ownerName}
                 </Paragraph>
                 <Space>
-                  <Button 
-                    type="primary" 
-                    icon={<PhoneOutlined />} 
-                    onClick={contactOwner}
-                  >
+                  <Button type="primary" icon={<PhoneOutlined />} onClick={contactOwner}>
                     Gọi điện
                   </Button>
-                  <Button 
-                    icon={<MailOutlined />} 
-                    onClick={emailOwner}
-                  >
+                  <Button icon={<MailOutlined />} onClick={emailOwner}>
                     Email
                   </Button>
                   <Button
@@ -397,7 +465,7 @@ const ApartmentDetailPage: React.FC = () => {
             )}
 
             <Divider orientation="left">Thông tin chi tiết</Divider>
-            
+
             <Descriptions bordered column={{ xs: 1, sm: 2 }}>
               <Descriptions.Item label={<><AreaChartOutlined /> Diện tích</>}>
                 {apartmentDetail.area} m²
@@ -421,7 +489,9 @@ const ApartmentDetailPage: React.FC = () => {
         <Col xs={24} md={8}>
           <Card bordered={false} className="mb-6 shadow">
             <div className="flex justify-between items-center mb-2">
-              <Title level={4} className="m-0">Đánh giá</Title>
+              <Title level={4} className="m-0">
+                Đánh giá
+              </Title>
               <Button
                 type={isLiked ? "primary" : "default"}
                 danger={isLiked}
@@ -458,9 +528,9 @@ const ApartmentDetailPage: React.FC = () => {
               <Button type="primary" block size="large" onClick={contactOwner}>
                 Liên hệ ngay
               </Button>
-              <Button 
-                block 
-                size="large" 
+              <Button
+                block
+                size="large"
                 icon={isLiked ? <HeartFilled /> : <HeartOutlined />}
                 onClick={isLiked ? handleUnlikeApartment : handleLikeApartment}
                 loading={likeLoading}
@@ -473,6 +543,14 @@ const ApartmentDetailPage: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {chatVisible && conversationId && (
+        <ChatPopup
+          visible={chatVisible}
+          onClose={() => setChatVisible(false)}
+          conversationId={conversationId}
+        />
+      )}
     </div>
   );
 };

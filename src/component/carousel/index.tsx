@@ -1,9 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Carousel, Tag, Button, notification } from 'antd';
+import React, { useState, useRef } from 'react';
+import { Carousel, Tag, Button } from 'antd';
 import { HeartOutlined, HeartFilled, RightOutlined, LeftOutlined } from '@ant-design/icons';
 import type { CarouselRef } from 'antd/es/carousel';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 interface Post {
     postId: string;
@@ -13,94 +11,19 @@ interface Post {
     totalSlot: number;
     currentSlot: number;
     approveStatusId: number;
-    aptId: string; // Thêm aptId vào interface
-}
-
-interface ImageData {
     aptId: string;
-    images: {
-        id: number;
-        imageUrl: string;
-        createAt: string;
-        updateAt: string;
-    }[];
 }
 
 interface FeaturedCarouselProps {
     posts: Post[];
+    images: { [key: string]: string }; // Nhận images từ Home
+    loading: boolean; // Nhận trạng thái loading từ Home
 }
 
-const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
+const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts, images, loading }) => {
     const [favorites, setFavorites] = useState<Record<string, boolean>>({});
-    const [images, setImages] = useState<{ [key: string]: string }>({}); // Mapping từ aptId sang URL ảnh
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const featuredPosts = posts.slice(0, 5);
+    const featuredPosts = posts.slice(0, 5); // Giới hạn 5 bài đăng
     const carouselRef = useRef<CarouselRef>(null);
-    const API_BASE_URL = 'https://www.renteasebe.io.vn';
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        const fetchImages = async () => {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                navigate('/', { state: { from: window.location.pathname } });
-                notification.warning({
-                    message: 'Authentication Required',
-                    description: 'Please log in to view featured properties',
-                    placement: 'topRight',
-                });
-                return;
-            }
-
-            setLoading(true);
-            setError(null);
-
-            try {
-                const headers = {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': '*/*',
-                };
-
-                console.log('Fetching images for posts:', featuredPosts.map(p => p.aptId)); // Sử dụng aptId
-
-                const imagePromises = featuredPosts.map(post =>
-                    axios.get(`${API_BASE_URL}/api/AptImage/GetByAptId?aptId=${post.aptId}`, { headers }) // Sử dụng aptId
-                        .catch(error => {
-                            console.error(`Failed to fetch image for aptId ${post.aptId}:`, error.response?.status);
-                            return { data: { data: { aptId: post.aptId, images: [] } } };
-                        })
-                );
-
-                const responses = await Promise.all(imagePromises);
-                const imageMap = responses.reduce((acc, response, index) => {
-                    const imageData: ImageData = response.data.data;
-                    if (imageData.images && imageData.images.length > 0) {
-                        const imageUrl = `${API_BASE_URL}${imageData.images[0].imageUrl}`;
-                        acc[featuredPosts[index].aptId] = imageUrl; // Sử dụng aptId
-                        console.log(`Image found for ${featuredPosts[index].aptId}: ${imageUrl}`);
-                    } else {
-                        console.log(`No images found for ${featuredPosts[index].aptId}`);
-                    }
-                    return acc;
-                }, {} as { [key: string]: string });
-
-                setImages(imageMap);
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                setError(`Failed to load images: ${errorMessage}`);
-                notification.error({
-                    message: 'Error loading images',
-                    description: errorMessage,
-                    placement: 'topRight',
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchImages();
-    }, [posts, navigate]);
 
     const toggleFavorite = (postId: string) => {
         setFavorites(prev => ({
@@ -134,14 +57,6 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
         return <div className="text-center p-8">Loading featured properties...</div>;
     }
 
-    if (error) {
-        return (
-            <div className="text-center text-red-600 p-8">
-                <p>{error}</p>
-            </div>
-        );
-    }
-
     return (
         <div className="featured-carousel relative mt-8 mb-12">
             <h2 className="text-2xl font-bold mb-6 text-blue-800 flex items-center">
@@ -156,7 +71,7 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                 dots={{ className: "custom-dots" }}
             >
                 {featuredPosts.map((post) => {
-                    const postImage = images[post.aptId]; // Sử dụng hình ảnh mặc định cục bộ
+                    const postImage = images[post.aptId] || 'https://via.placeholder.com/400'; // Fallback image
 
                     return (
                         <div key={post.postId} className="relative">
@@ -210,7 +125,6 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                 icon={<LeftOutlined />}
                 onClick={previous}
             />
-
             <Button
                 className="absolute right-4 top-1/2 z-10 bg-white/70 hover:bg-white shadow-lg transform -translate-y-1/2"
                 shape="circle"
