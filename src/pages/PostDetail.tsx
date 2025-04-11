@@ -12,6 +12,33 @@ interface Post {
   moveInDate: string;
   moveOutDate: string;
   createdAt: string;
+  aptId: string; // Thêm aptId
+  status: boolean; 
+}
+
+interface Apt {
+  aptId: string;
+  ownerName: string;
+  ownerPhone: string;
+  name: string;
+  area: number;
+  address: string;
+  addressLink: string;
+  numberOfRoom: number;
+  numberOfSlot: number;
+  note: string;
+}
+
+interface AptImage {
+  id: number;
+  imageUrl: string;
+  createAt: string;
+  updateAt: string;
+}
+
+interface AptImageResponse {
+  aptId: string;
+  images: AptImage[];
 }
 
 interface OrderType {
@@ -27,11 +54,12 @@ const PostDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [post, setPost] = useState<Post | null>(null);
+  const [apt, setApt] = useState<Apt | null>(null);
+  const [aptImages, setAptImages] = useState<AptImage[]>([]);
   const [orderTypes, setOrderTypes] = useState<OrderType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentUrl] = useState<string | null>(null);
-
 
   // Sử dụng "accessToken" thay vì "token" để đồng bộ với Login
   const token = localStorage.getItem("accessToken");
@@ -45,11 +73,29 @@ const PostDetail = () => {
       }
 
       try {
+        // Fetch post data
         const postResponse = await axios.get(`https://www.renteasebe.io.vn/api/Post/GetById?id=${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setPost(postResponse.data.data as Post);
+        const postData = postResponse.data.data as Post;
+        setPost(postData);
 
+        // Fetch apt data using aptId from post
+        if (postData.aptId) {
+          const aptResponse = await axios.get(`https://www.renteasebe.io.vn/api/Apt/GetById?aptId=${postData.aptId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setApt(aptResponse.data.data as Apt);
+
+          // Fetch apt images
+          const aptImagesResponse = await axios.get(`https://www.renteasebe.io.vn/api/AptImage/GetByAptId?aptId=${postData.aptId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const imagesData = aptImagesResponse.data.data as AptImageResponse;
+          setAptImages(imagesData.images || []);
+        }
+
+        // Fetch order types
         const orderTypesResponse = await axios.get("https://www.renteasebe.io.vn/api/OrderType/GetAll?page=1&pageSize=10", {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -122,7 +168,78 @@ const PostDetail = () => {
         <p className="text-blue-600 font-semibold">
           <strong>Còn chỗ:</strong> {post.totalSlot - post.currentSlot} / {post.totalSlot}
         </p>
+        <div className="flex justify-between items-start">
+              <h3 className="text-xl font-semibold text-gray-900 line-clamp-1">{post.title}</h3>
+              <span
+                className={`text-xs font-bold px-2 py-1 rounded-full ${
+                  post.status ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                }`}
+              >
+                {post.status ? "Đã thanh toán" : "Chưa thanh toán"}
+              </span>
+            </div>
       </div>
+
+      {/* Apartment Details */}
+      {apt && (
+        <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-lg mb-6">
+          <h3 className="text-xl font-semibold mb-4">Thông tin căn hộ</h3>
+          
+          {/* Apartment Images */}
+          {aptImages.length > 0 && (
+            <div className="mb-4 overflow-x-auto">
+              <div className="flex space-x-2">
+                {aptImages.map((image) => (
+                  <img
+                    key={image.id}
+                    src={`https://www.renteasebe.io.vn${image.imageUrl}`}
+                    alt="Hình ảnh căn hộ"
+                    className="h-48 w-auto object-cover rounded"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <h4 className="font-bold text-lg">{apt.name}</h4>
+          <p className="text-gray-700">
+            <strong>Địa chỉ:</strong> {apt.address}
+          </p>
+          <p className="text-gray-700">
+            <strong>Diện tích:</strong> {apt.area} m²
+          </p>
+          <p className="text-gray-700">
+            <strong>Số phòng:</strong> {apt.numberOfRoom}
+          </p>
+          <p className="text-gray-700">
+            <strong>Tổng số chỗ:</strong> {apt.numberOfSlot}
+          </p>
+          <p className="text-gray-700">
+            <strong>Mô tả:</strong> {apt.note}
+          </p>
+          
+          {apt.addressLink && (
+            <a 
+              href={apt.addressLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline mt-2 inline-block"
+            >
+              Xem trên bản đồ
+            </a>
+          )}
+          
+          <div className="mt-4 p-4 bg-gray-100 rounded">
+            <h5 className="font-semibold">Thông tin chủ hộ</h5>
+            <p className="text-gray-700">
+              <strong>Tên:</strong> {apt.ownerName}
+            </p>
+            <p className="text-gray-700">
+              <strong>Số điện thoại:</strong> {apt.ownerPhone}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Payment Options */}
       <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-lg">

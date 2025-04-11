@@ -13,7 +13,9 @@ interface Post {
     totalSlot: number;
     currentSlot: number;
     approveStatusId: number;
-    aptId: string; // Thêm aptId vào interface
+    aptId: string;
+    status: boolean;
+    postCategoryId: number;
 }
 
 interface ImageData {
@@ -32,13 +34,17 @@ interface FeaturedCarouselProps {
 
 const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
     const [favorites, setFavorites] = useState<Record<string, boolean>>({});
-    const [images, setImages] = useState<{ [key: string]: string }>({}); // Mapping từ aptId sang URL ảnh
+    const [images, setImages] = useState<{ [key: string]: string }>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const featuredPosts = posts.slice(0, 5);
     const carouselRef = useRef<CarouselRef>(null);
     const API_BASE_URL = 'https://www.renteasebe.io.vn';
     const navigate = useNavigate();
+
+    // Lọc post có status=true và postCategoryId=1
+    const featuredPosts = posts
+        .filter(post => post.status === true && post.postCategoryId === 2)
+        .slice(0, 5);
 
     useEffect(() => {
         const fetchImages = async () => {
@@ -62,10 +68,8 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                     'Accept': '*/*',
                 };
 
-                console.log('Fetching images for posts:', featuredPosts.map(p => p.aptId)); // Sử dụng aptId
-
                 const imagePromises = featuredPosts.map(post =>
-                    axios.get(`${API_BASE_URL}/api/AptImage/GetByAptId?aptId=${post.aptId}`, { headers }) // Sử dụng aptId
+                    axios.get(`${API_BASE_URL}/api/AptImage/GetByAptId?aptId=${post.aptId}`, { headers })
                         .catch(error => {
                             console.error(`Failed to fetch image for aptId ${post.aptId}:`, error.response?.status);
                             return { data: { data: { aptId: post.aptId, images: [] } } };
@@ -77,10 +81,7 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                     const imageData: ImageData = response.data.data;
                     if (imageData.images && imageData.images.length > 0) {
                         const imageUrl = `${API_BASE_URL}${imageData.images[0].imageUrl}`;
-                        acc[featuredPosts[index].aptId] = imageUrl; // Sử dụng aptId
-                        console.log(`Image found for ${featuredPosts[index].aptId}: ${imageUrl}`);
-                    } else {
-                        console.log(`No images found for ${featuredPosts[index].aptId}`);
+                        acc[featuredPosts[index].aptId] = imageUrl;
                     }
                     return acc;
                 }, {} as { [key: string]: string });
@@ -126,7 +127,10 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
             default: return 'Chưa xác định';
         }
     };
-
+    const handleOnClick = (postId: string) => {
+        navigate(`/home/post/${postId}`);
+    };
+    
     const next = () => carouselRef.current?.next();
     const previous = () => carouselRef.current?.prev();
 
@@ -138,6 +142,14 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
         return (
             <div className="text-center text-red-600 p-8">
                 <p>{error}</p>
+            </div>
+        );
+    }
+
+    if (featuredPosts.length === 0) {
+        return (
+            <div className="text-center p-8 text-gray-500">
+                Không có bất động sản nổi bật để hiển thị.
             </div>
         );
     }
@@ -156,7 +168,7 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                 dots={{ className: "custom-dots" }}
             >
                 {featuredPosts.map((post) => {
-                    const postImage = images[post.aptId]; // Sử dụng hình ảnh mặc định cục bộ
+                    const postImage = images[post.aptId];
 
                     return (
                         <div key={post.postId} className="relative">
@@ -193,9 +205,14 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                                         <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
                                             Chỗ trống: {post.currentSlot}/{post.totalSlot}
                                         </span>
-                                        <Button type="primary" className="bg-blue-600 hover:bg-blue-700">
-                                            Xem chi tiết
-                                        </Button>
+                                        <Button
+    type="primary"
+    className="bg-blue-600 hover:bg-blue-700"
+    onClick={() => handleOnClick(post.postId)}
+>
+    Xem chi tiết
+</Button>
+
                                     </div>
                                 </div>
                             </div>
