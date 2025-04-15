@@ -45,7 +45,7 @@ type AptFormData = {
     districtId: number;
     wardId: number;
     aptCategoryId: number;
-    aptStatusId: number;
+    // aptStatusId: number;
     numberOfRoom: number;
     numberOfSlot: number;
     note?: string;
@@ -137,7 +137,7 @@ const CreateApartment: React.FC = () => {
                 message: "Authentication Error", 
                 description: "Please log in again to continue" 
             });
-            navigate("/login");
+            navigate("/");
             return;
         }
 
@@ -159,7 +159,7 @@ const CreateApartment: React.FC = () => {
                     message: "Authentication Error",
                     description: "Invalid token format. Please log in again."
                 });
-                navigate("/login");
+                navigate("/");
                 return;
             }
 
@@ -339,7 +339,7 @@ const CreateApartment: React.FC = () => {
                 message: "Authentication Error", 
                 description: "Please log in again to continue" 
             });
-            navigate("/login");
+            navigate("/");
             return;
         }
         
@@ -350,7 +350,7 @@ const CreateApartment: React.FC = () => {
                 districtId: Number(values.districtId),
                 wardId: Number(values.wardId),
                 aptCategoryId: Number(values.aptCategoryId),
-                aptStatusId: Number(values.aptStatusId),
+                // aptStatusId: Number(values.aptStatusId),
                 area: Number(values.area),
                 numberOfRoom: Number(values.numberOfRoom),
                 numberOfSlot: Number(values.numberOfSlot)
@@ -366,7 +366,7 @@ const CreateApartment: React.FC = () => {
                 message: "Apartment Posted Successfully!",
                 description: "Redirecting to home page..."
             });
-            setTimeout(() => navigate("/landlord-home"), 1500);
+            setTimeout(() => navigate("/home/landlord-home"), 1500);
         } catch (error) {
             console.error("Submission error:", error);
             const axiosError = error as AxiosError<{ message?: string }>;
@@ -462,13 +462,13 @@ const CreateApartment: React.FC = () => {
                                 options: formData.categories,
                                 rules: true
                             },
-                            {
-                                name: 'aptStatusId',
-                                label: 'Apartment Status',
-                                type: 'select',
-                                options: formData.statuses,
-                                rules: true
-                            },
+                            // {
+                            //     name: 'aptStatusId',
+                            //     label: 'Apartment Status',
+                            //     type: 'select',
+                            //     options: formData.statuses,
+                            //     rules: true
+                            // },
                             { name: 'numberOfRoom', label: 'Number of Rooms', type: 'number', rules: true },
                             { name: 'numberOfSlot', label: 'Maximum Occupancy', type: 'number', rules: true }
                         ].map(field => (

@@ -72,7 +72,7 @@ const EnhancedPropertyGrid: React.FC<PropertyGridProps> = ({ posts, categories, 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {posts
-        .filter((post) => post.status === true && post.postCategoryId === 2)
+        .filter((post) => post.status === true && post.postCategoryId === 1)
         .map((post) => (
           <Card
             key={post.postId}

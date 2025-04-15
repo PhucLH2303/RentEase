@@ -63,11 +63,10 @@ const PostDetail = () => {
 
   // Sử dụng "accessToken" thay vì "token" để đồng bộ với Login
   const token = localStorage.getItem("accessToken");
-
+  const roleId = localStorage.getItem("roleId");
   useEffect(() => {
     const fetchData = async () => {
       if (!token) {
-        // Điều hướng đến trang đăng nhập, lưu URL hiện tại để quay lại sau
         navigate("/", { state: { from: location.pathname } });
         return;
       }
@@ -80,7 +79,7 @@ const PostDetail = () => {
         const postData = postResponse.data.data as Post;
         setPost(postData);
 
-        // Fetch apt data using aptId from post
+        // Fetch apt data
         if (postData.aptId) {
           const aptResponse = await axios.get(`https://www.renteasebe.io.vn/api/Apt/GetById?aptId=${postData.aptId}`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -99,7 +98,20 @@ const PostDetail = () => {
         const orderTypesResponse = await axios.get("https://www.renteasebe.io.vn/api/OrderType/GetAll?page=1&pageSize=10", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setOrderTypes(orderTypesResponse.data.data);
+        let fetchedOrderTypes = orderTypesResponse.data.data as OrderType[];
+
+        // Lọc orderTypes dựa trên roleId
+        if (roleId === "2") {
+          fetchedOrderTypes = fetchedOrderTypes.filter(
+            (orderType) => orderType.name.toLowerCase() !== "findhomie"
+          );
+        } else if (roleId === "3") {
+          fetchedOrderTypes = fetchedOrderTypes.filter(
+            (orderType) => orderType.name.toLowerCase() === "findhomie"
+          );
+        }
+
+        setOrderTypes(fetchedOrderTypes);
       } catch (err) {
         setError("Lỗi khi tải dữ liệu!");
         console.error("Fetch error:", err);
@@ -109,7 +121,7 @@ const PostDetail = () => {
     };
 
     fetchData();
-  }, [id, token, navigate, location.pathname]);
+  }, [id, token, navigate, location.pathname, roleId]);
 
   const handleCreatePayment = async (orderType: OrderType) => {
     if (!post || !token) return;
