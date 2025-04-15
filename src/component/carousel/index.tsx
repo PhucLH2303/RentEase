@@ -130,7 +130,7 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
     const handleOnClick = (postId: string) => {
         navigate(`/home/post/${postId}`);
     };
-    
+
     const next = () => carouselRef.current?.next();
     const previous = () => carouselRef.current?.prev();
 
@@ -206,12 +206,12 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                                             Chỗ trống: {post.currentSlot}/{post.totalSlot}
                                         </span>
                                         <Button
-    type="primary"
-    className="bg-blue-600 hover:bg-blue-700"
-    onClick={() => handleOnClick(post.postId)}
->
-    Xem chi tiết
-</Button>
+                                            type="primary"
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                            onClick={() => handleOnClick(post.postId)}
+                                        >
+                                            Xem chi tiết
+                                        </Button>
 
                                     </div>
                                 </div>
