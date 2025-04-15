@@ -3,18 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button, Form, Input, Select, DatePicker, notification } from "antd";
 import axios from "axios";
 
-
 const { Option } = Select;
-
-interface PostCategory {
-  id: number;
-  categoryName: string;
-  note: string;
-  createdAt: string;
-  updatedAt: string | null;
-  deletedAt: string | null;
-  status: boolean | null;
-}
 
 interface PostFormData {
   postCategoryId: number;
@@ -30,43 +19,42 @@ interface PostFormData {
   approveStatusId: number;
 }
 
+const fixedCategories = [
+  { id: 1, categoryName: "Thuê" },
+  { id: 2, categoryName: "Kiếm bạn" },
+];
+
 const CreatePost: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<PostCategory[]>([]);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [roleId, setRoleId] = useState<number | null>(null);
 
-  // Lấy aptId từ state của location (truyền từ UserApartmentList)
   const aptId = (location.state as { aptId?: string })?.aptId;
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      const token = localStorage.getItem("accessToken");
-      if (!token) {
-        navigate("/", { state: { from: "/create-post" } });
-        return;
-      }
-
-      try {
-        const response = await axios.get("https://renteasebe.io.vn/api/PostCategory/GetAll", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCategories(response.data.data);
-      } catch (err) {
-        setFetchError("Không thể tải danh mục bài đăng. Vui lòng thử lại sau.");
-        console.error("Error fetching categories:", err);
-      }
-    };
-
-    fetchCategories();
-
-    // Nếu có aptId, điền sẵn vào form
-    if (aptId) {
-      form.setFieldsValue({ aptId });
+    const storedRoleId = localStorage.getItem("roleId");
+    if (storedRoleId) {
+      setRoleId(Number(storedRoleId));
     }
-  }, [aptId, form, navigate]);
+  }, []);
+
+  useEffect(() => {
+    const initialValues: any = {};
+
+    if (aptId) {
+      initialValues.aptId = aptId;
+    }
+
+    if (roleId === 2) {
+      initialValues.postCategoryId = 1;
+    } else if (roleId === 3) {
+      initialValues.postCategoryId = 2;
+    }
+
+    form.setFieldsValue(initialValues);
+  }, [aptId, form, roleId]);
 
   const openNotification = (type: "success" | "error", message: string, description: string) => {
     notification[type]({
@@ -97,7 +85,7 @@ const CreatePost: React.FC = () => {
       note: values.note,
       moveInDate: values.moveInDate.format("YYYY-MM-DD"),
       moveOutDate: values.moveOutDate.format("YYYY-MM-DD"),
-      approveStatusId: 1, // Mặc định là "Đang duyệt"
+      approveStatusId: 1,
     };
 
     try {
@@ -105,7 +93,7 @@ const CreatePost: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       openNotification("success", "Tạo bài đăng thành công", "Bài đăng của bạn đã được gửi để duyệt.");
-      setTimeout(() => navigate("/home/profile"), 1000); // Quay lại danh sách căn hộ
+      setTimeout(() => navigate("/home/profile"), 1000);
     } catch (err) {
       console.error("Error creating post:", err);
       openNotification("error", "Tạo bài đăng thất bại", "Vui lòng thử lại sau.");
@@ -113,15 +101,6 @@ const CreatePost: React.FC = () => {
       setLoading(false);
     }
   };
-
-  if (fetchError) {
-    return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-        <strong className="font-bold">Lỗi!</strong>
-        <span className="block sm:inline"> {fetchError}</span>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -138,8 +117,8 @@ const CreatePost: React.FC = () => {
           name="postCategoryId"
           rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
         >
-          <Select placeholder="Chọn danh mục">
-            {categories.map((category) => (
+          <Select placeholder="Chọn danh mục" disabled={roleId === 2 || roleId === 3}>
+            {fixedCategories.map((category) => (
               <Option key={category.id} value={category.id}>
                 {category.categoryName}
               </Option>

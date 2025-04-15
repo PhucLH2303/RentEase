@@ -13,7 +13,9 @@ import {
   Row,
   Col,
   Avatar,
-  message 
+  message,
+  List,
+  Empty
 } from "antd";
 import { 
   HomeOutlined, 
@@ -27,7 +29,8 @@ import {
   DollarOutlined,
   InfoCircleOutlined,
   HeartOutlined,
-  HeartFilled
+  HeartFilled,
+  ArrowRightOutlined
 } from "@ant-design/icons";
 
 const { Title, Paragraph, Text } = Typography;
@@ -161,6 +164,10 @@ const PostDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [likeLoading, setLikeLoading] = useState<boolean>(false);
+  
+  // New state for related roommate posts
+  const [relatedPosts, setRelatedPosts] = useState<PostDetail[]>([]);
+  const [relatedPostsLoading, setRelatedPostsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchPostDetails = async () => {
@@ -242,12 +249,17 @@ const PostDetailPage: React.FC = () => {
               } else {
                 message.error("Không thể tải hình ảnh căn hộ");
               }
+              
+              // Fetch related roommate posts if the post category is 1 (shared room)
+              if (postData.data.postCategoryId === 1) {
+                fetchRelatedRoommatePosts(postData.data.aptId);
+              }
             } else {
               message.error("Không thể tải thông tin căn hộ");
             }
           }
           
-          // Check if post is liked by current user (if you have such functionality)
+          // Check if post is liked by current user
           await checkLikeStatus(postId, token);
         } else {
           message.error("Không thể tải thông tin bài đăng");
@@ -267,6 +279,35 @@ const PostDetailPage: React.FC = () => {
       setLoading(false);
     }
   }, [postId]);
+  
+  // New function to fetch related roommate posts
+  const fetchRelatedRoommatePosts = async (aptId: string) => {
+    setRelatedPostsLoading(true);
+    const token = localStorage.getItem("accessToken");
+    
+    try {
+      const response = await fetch(
+        `https://renteasebe.io.vn/api/Post/GetByAptIdAndPostCategoryId?aptId=${aptId}&postCategoryId=2&status=true`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      const data: ApiResponse<PostDetail[]> = await response.json();
+      
+      if (data.statusCode === 200) {
+        setRelatedPosts(data.data);
+      } else {
+        console.error("Failed to fetch related posts:", data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching related roommate posts:", error);
+    } finally {
+      setRelatedPostsLoading(false);
+    }
+  };
   
   // Placeholder for checking like status - implement according to your API
   const checkLikeStatus = async (postId: string, token: string | null) => {
@@ -369,6 +410,11 @@ const PostDetailPage: React.FC = () => {
     }
   };
 
+  // Handle navigation to another post
+  const navigateToPost = (postId: string) => {
+    navigate(`/home/post/${postId}`);
+  };
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString("vi-VN");
@@ -420,6 +466,24 @@ const PostDetailPage: React.FC = () => {
   }
 
   const imageBaseUrl = "https://renteasebe.io.vn";
+
+  // Function to render the vacancy status with colors
+  const renderVacancyStatus = (total: number, current: number) => {
+    const remaining = Math.max(0, total - current);
+    let color = "green";
+    
+    if (remaining === 0) {
+      color = "red";
+    } else if (remaining <= 1) {
+      color = "orange";
+    }
+    
+    return (
+      <Tag color={color}>
+        {remaining > 0 ? `Còn ${remaining} chỗ trống` : "Đã đủ người"}
+      </Tag>
+    );
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -610,6 +674,67 @@ const PostDetailPage: React.FC = () => {
               )}
             </Card>
           )}
+
+          {/* New section for related roommate posts - only shown for postCategoryId === 1 */}
+          {postDetail.postCategoryId === 1 && (
+            <Card bordered={false} className="mb-6 shadow">
+              <Title level={3}>Bài đăng tìm người ở ghép cùng căn hộ</Title>
+              <Divider />
+              
+              {relatedPostsLoading ? (
+                <Skeleton active paragraph={{ rows: 3 }} />
+              ) : relatedPosts.length > 0 ? (
+                <List
+                  dataSource={relatedPosts}
+                  itemLayout="vertical"
+                  renderItem={item => (
+                    <List.Item 
+                      key={item.postId}
+                      actions={[
+                        <Button 
+                          type="primary" 
+                          onClick={() => navigateToPost(item.postId)}
+                          icon={<ArrowRightOutlined />}
+                        >
+                          Xem chi tiết
+                        </Button>
+                      ]}
+                    >
+                      <List.Item.Meta
+                        title={
+                          <div className="flex items-center justify-between">
+                            <Text strong>{item.title}</Text>
+                            {renderVacancyStatus(item.totalSlot, item.currentSlot)}
+                          </div>
+                        }
+                        description={
+                          <Space direction="vertical" size="small">
+                            <Space size="middle">
+                              <Tag color={genderMap[item.genderId]?.color || "blue"}>
+                                <UserOutlined /> {genderMap[item.genderId]?.text || "Không yêu cầu"}
+                              </Tag>
+                              <Tag color="purple">
+                                <InfoCircleOutlined /> {ageMap[item.oldId] || "Không yêu cầu"}
+                              </Tag>
+                              <Text>
+                                <CalendarOutlined /> Dọn vào: {formatDate(item.moveInDate)}
+                              </Text>
+                            </Space>
+                            <Text className="line-clamp-2">{item.note}</Text>
+                          </Space>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <Empty
+                  description="Không có bài đăng tìm người ở ghép cho căn hộ này"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              )}
+            </Card>
+          )}
         </Col>
 
         <Col xs={24} md={8}>
@@ -675,6 +800,32 @@ const PostDetailPage: React.FC = () => {
                 </Tag>
               </div>
             </Space>
+          </Card>
+
+          {/* Show vacancy status for current post */}
+          <Card bordered={false} className="mb-6 shadow">
+            <Title level={4}>Tình trạng chỗ ở</Title>
+            <div className="flex items-center justify-between">
+              <div><Text>Tổng số chỗ:</Text>
+                <Text strong>{postDetail.totalSlot}</Text>
+              </div>
+              <div>
+                <Text>Đã có:</Text>
+                <Text strong>{postDetail.currentSlot}</Text>
+              </div>
+              <div>
+                <Text>Còn trống:</Text>
+                <Text strong>{Math.max(0, postDetail.totalSlot - postDetail.currentSlot)}</Text>
+              </div>
+            </div>
+            <div className="mt-4">
+              {renderVacancyStatus(postDetail.totalSlot, postDetail.currentSlot)}
+              <Text className="ml-2">
+                {Math.max(0, postDetail.totalSlot - postDetail.currentSlot) > 0 
+                  ? "Còn nhận thêm người" 
+                  : "Đã đủ người"}
+              </Text>
+            </div>
           </Card>
 
           {apartmentDetail && (
