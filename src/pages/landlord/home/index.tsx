@@ -5,6 +5,11 @@ import CreateApartment from '../create-appartment/index';
 const HomeLandlord: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'listings' | 'create'>('listings');
 
+    // Callback để chuyển về tab listings
+    const switchToListings = () => {
+        setActiveTab('listings');
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
             {/* Main Content */}
@@ -34,7 +39,7 @@ const HomeLandlord: React.FC = () => {
 
                     {/* Content */}
                     <div className="p-6">
-                        {activeTab === 'listings' ? <ApartmentList /> : <CreateApartment />}
+                        {activeTab === 'listings' ? <ApartmentList /> : <CreateApartment onCreateSuccess={switchToListings} />}
                     </div>
                 </div>
             </div>

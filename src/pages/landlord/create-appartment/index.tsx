@@ -51,7 +51,7 @@ type AptFormData = {
     note?: string;
 }
 
-type Category = { id: number; categoryName: string }
+type Category = { id: number; categoryName: string; note: string }
 type Status = { id: number; statusName: string }
 
 type SelectOption = Province | District | Ward | Category | Status;
@@ -59,7 +59,7 @@ type SelectOption = Province | District | Ward | Category | Status;
 // Type guards
 function isProvince(option: SelectOption): option is Province { return 'Districts' in option; }
 function isDistrict(option: SelectOption): option is District { return 'Wards' in option; }
-function isCategory(option: SelectOption): option is Category { return 'categoryName' in option; }
+function isCategory(option: SelectOption): option is Category { return 'categoryName' in option && 'note' in option; }
 function isStatus(option: SelectOption): option is Status { return 'statusName' in option; }
 
 // Component to resize the map when the modal opens
@@ -81,7 +81,11 @@ const MapClickHandler: React.FC<{ onLocationSelect: (latlng: LatLng) => void }> 
     return null;
 };
 
-const CreateApartment: React.FC = () => {
+interface CreateApartmentProps {
+    onCreateSuccess?: () => void;
+}
+
+const CreateApartment: React.FC<CreateApartmentProps> = ({ onCreateSuccess }) => {
     const [form] = Form.useForm();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
@@ -316,7 +320,7 @@ const CreateApartment: React.FC = () => {
         if (isProvince(option) || isDistrict(option) || (option as Ward).Name) {
             return (option as Province | District | Ward).Name;
         }
-        if (isCategory(option)) return option.categoryName;
+        if (isCategory(option)) return option.note; // Display note instead of categoryName
         if (isStatus(option)) return option.statusName;
         return '';
     };
@@ -364,9 +368,14 @@ const CreateApartment: React.FC = () => {
 
             notification.success({
                 message: "Apartment Posted Successfully!",
-                description: "Redirecting to home page..."
+                description: "Redirecting to listings..."
             });
-            setTimeout(() => navigate("/home/landlord-home"), 1500);
+            setTimeout(() => {
+                navigate("/home/landlord-home");
+                if (onCreateSuccess) {
+                    onCreateSuccess(); // Chuyển về tab listings
+                }
+            }, 1500);
         } catch (error) {
             console.error("Submission error:", error);
             const axiosError = error as AxiosError<{ message?: string }>;

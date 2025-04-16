@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Carousel, Tag, Button, notification } from 'antd';
+import { Carousel, Button, notification } from 'antd';
 import { HeartOutlined, HeartFilled, RightOutlined, LeftOutlined } from '@ant-design/icons';
 import type { CarouselRef } from 'antd/es/carousel';
 import axios from 'axios';
@@ -110,23 +110,23 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
         }));
     };
 
-    const getStatusColor = (statusId: number) => {
-        switch (statusId) {
-            case 1: return 'green';
-            case 2: return 'blue';
-            case 3: return 'orange';
-            default: return 'default';
-        }
-    };
+    // const getStatusColor = (statusId: number) => {
+    //     switch (statusId) {
+    //         case 1: return 'green';
+    //         case 2: return 'blue';
+    //         case 3: return 'orange';
+    //         default: return 'default';
+    //     }
+    // };
 
-    const getStatusText = (statusId: number) => {
-        switch (statusId) {
-            case 1: return 'Còn trống';
-            case 2: return 'Sắp có';
-            case 3: return 'Đang hot';
-            default: return 'Chưa xác định';
-        }
-    };
+    // const getStatusText = (statusId: number) => {
+    //     switch (statusId) {
+    //         case 1: return 'Còn trống';
+    //         case 2: return 'Sắp có';
+    //         case 3: return 'Đang hot';
+    //         default: return 'Chưa xác định';
+    //     }
+    // };
     const handleOnClick = (postId: string) => {
         navigate(`/home/post/${postId}`);
     };
@@ -189,11 +189,11 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
                                     />
                                 </div>
 
-                                <div className="absolute top-4 left-4">
+                                {/* <div className="absolute top-4 left-4">
                                     <Tag color={getStatusColor(post.approveStatusId)} className="px-3 py-1 text-sm font-medium">
                                         {getStatusText(post.approveStatusId)}
                                     </Tag>
-                                </div>
+                                </div> */}
 
                                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                                     <h3 className="text-2xl font-bold mb-2">{post.title}</h3>

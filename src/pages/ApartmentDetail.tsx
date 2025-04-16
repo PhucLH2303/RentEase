@@ -162,36 +162,30 @@ const ApartmentDetailPage: React.FC = () => {
         }
 
         // Fetch utilities using POST with proper parameters
-        try {
-          const utilitiesResponse = await fetch(
-            `https://renteasebe.io.vn/api/AptUtility/GetByAptId`,
-            {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                aptId: aptId,
-                page: 1,
-                pageSize: 10
-              })
-            }
-          );
+try {
+  const utilitiesResponse = await fetch(
+    `https://renteasebe.io.vn/api/AptUtility/GetByAptId?aptId=${aptId}`,
+    {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    }
+  );
 
-          if (!utilitiesResponse.ok) {
-            console.warn(`POST utilities failed with status: ${utilitiesResponse.status}`);
-          } else {
-            const utilitiesData = await utilitiesResponse.json();
-            if (utilitiesData.statusCode === 200) {
-              setApartmentUtilities(utilitiesData.data);
-            } else {
-              console.warn("Failed to get utilities data:", utilitiesData.message);
-            }
-          }
-        } catch (utilitiesError) {
-          console.error("Error fetching utilities:", utilitiesError);
-        }
+  if (!utilitiesResponse.ok) {
+    console.warn(`Utilities fetch failed with status: ${utilitiesResponse.status}`);
+  } else {
+    const utilitiesData = await utilitiesResponse.json();
+    if (utilitiesData.statusCode === 200) {
+      setApartmentUtilities(utilitiesData.data);
+    } else {
+      console.warn("Failed to get utilities data:", utilitiesData.message);
+    }
+  }
+} catch (utilitiesError) {
+  console.error("Error fetching utilities:", utilitiesError);
+}
 
         if (detailData.statusCode === 200) {
           setApartmentDetail(detailData.data);

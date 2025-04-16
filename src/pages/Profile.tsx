@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { Drawer, List, Spin, Input, Button } from "antd";
+import { Drawer, List, Spin, Input, Button, Radio } from "antd";
 import { SendOutlined, MessageOutlined } from "@ant-design/icons";
 
 interface Post {
@@ -12,6 +12,7 @@ interface Post {
   moveOutDate: string;
   totalSlot: number;
   currentSlot: number;
+  status: boolean; // true là archive, false là active
 }
 
 interface Conversation {
@@ -52,6 +53,7 @@ const PostList = () => {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState<string>("");
   const [sending, setSending] = useState<boolean>(false);
+  const [filterStatus, setFilterStatus] = useState<string>("all"); // Thêm state cho bộ lọc: 'all', 'active', 'archive'
 
   const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
   const userString = localStorage.getItem("user");
@@ -228,6 +230,18 @@ const PostList = () => {
     }
   };
 
+  // Lọc danh sách bài đăng theo trạng thái
+  const filteredPosts = posts.filter((post) => {
+    if (filterStatus === "all") return true;
+    if (filterStatus === "archive") return post.status === true;
+    if (filterStatus === "active") return post.status === false;
+    return true;
+  });
+
+  const handleFilterChange = (e: any) => {
+    setFilterStatus(e.target.value);
+  };
+
   if (loading) return <p className="text-center text-gray-600">Đang tải...</p>;
   if (error) return <p className="text-center text-red-500">{error}</p>;
   if (posts.length === 0) return <p className="text-center text-gray-600">Không tìm thấy bài đăng nào.</p>;
@@ -246,30 +260,51 @@ const PostList = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {posts.map((post) => (
-          <div key={post.postId} className="bg-white border border-gray-200 p-4 rounded-xl shadow-md hover:shadow-lg transition">
-            <h3 className="text-lg font-semibold text-gray-900 truncate">{post.title}</h3>
-            <p className="text-gray-600 text-sm truncate"><strong>Ghi chú:</strong> {post.note}</p>
-            <p className="text-gray-700"><strong>Ngày vào:</strong> {post.moveInDate}</p>
-            <p className="text-gray-700"><strong>Ngày ra:</strong> {post.moveOutDate}</p>
-            <p className="text-blue-600 font-semibold"><strong>Còn chỗ:</strong> {post.totalSlot - post.currentSlot} / {post.totalSlot}</p>
-            <div className="mt-4 flex justify-between items-center">
-              <Link to={`/home/profile/${post.postId}`} className="text-blue-600 hover:underline">
-                Xem chi tiết →
-              </Link>
-              {accountId && (
-                <Link
-                  to={`/home/profile/edit/${post.postId}`}
-                  className="text-green-600 text-sm font-medium hover:underline"
-                >
-                  Chỉnh sửa
-                </Link>
-              )}
-            </div>
-          </div>
-        ))}
+      {/* Bộ lọc trạng thái */}
+      <div className="mb-4">
+        <Radio.Group value={filterStatus} onChange={handleFilterChange} buttonStyle="solid">
+          <Radio.Button value="all">Tất cả</Radio.Button>
+          <Radio.Button value="active">Đang hoạt động</Radio.Button>
+          <Radio.Button value="archive">Đã lưu trữ</Radio.Button>
+        </Radio.Group>
       </div>
+
+      {filteredPosts.length === 0 ? (
+        <p className="text-center text-gray-600 mt-8">Không có bài đăng nào phù hợp với bộ lọc.</p>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPosts.map((post) => (
+            <div 
+              key={post.postId} 
+              className={`bg-white border ${post.status ? 'border-amber-300' : 'border-gray-200'} p-4 rounded-xl shadow-md hover:shadow-lg transition`}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 truncate">{post.title}</h3>
+                {post.status && (
+                  <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded">Đã lưu trữ</span>
+                )}
+              </div>
+              <p className="text-gray-600 text-sm truncate"><strong>Ghi chú:</strong> {post.note}</p>
+              <p className="text-gray-700"><strong>Ngày vào:</strong> {post.moveInDate}</p>
+              <p className="text-gray-700"><strong>Ngày ra:</strong> {post.moveOutDate}</p>
+              <p className="text-blue-600 font-semibold"><strong>Còn chỗ:</strong> {post.totalSlot - post.currentSlot} / {post.totalSlot}</p>
+              <div className="mt-4 flex justify-between items-center">
+                <Link to={`/home/profile/${post.postId}`} className="text-blue-600 hover:underline">
+                  Xem chi tiết →
+                </Link>
+                {accountId && (
+                  <Link
+                    to={`/home/profile/edit/${post.postId}`}
+                    className="text-green-600 text-sm font-medium hover:underline"
+                  >
+                    Chỉnh sửa
+                  </Link>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Conversations Drawer */}
       <Drawer

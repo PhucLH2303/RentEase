@@ -334,15 +334,26 @@ const UserApartmentList: React.FC = () => {
         if (window.confirm('Bạn có chắc chắn muốn xóa căn hộ này không?')) {
             try {
                 const token = localStorage.getItem('accessToken');
-                await axios.delete(`${API_BASE_URL}/api/Apt/${aptId}`, {
+                if (!token) {
+                    alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+                    return;
+                }
+                
+                // Sử dụng API endpoint mới
+                await axios.delete(`${API_BASE_URL}/api/Apt`, {
                     headers: { Authorization: `Bearer ${token}` },
+                    params: { aptId: aptId } // Truyền aptId qua query parameter
                 });
+                
+                // Cập nhật state sau khi xóa thành công
                 setApartments(apartments.filter(apt => apt.aptId !== aptId));
                 setImages(prev => {
                     const newImages = { ...prev };
                     delete newImages[aptId];
                     return newImages;
                 });
+                
+                alert('Xóa căn hộ thành công!');
             } catch (err) {
                 console.error('Error deleting apartment:', err);
                 alert('Không thể xóa căn hộ. Vui lòng thử lại sau.');
@@ -467,14 +478,14 @@ const UserApartmentList: React.FC = () => {
         }
     };
 
-    const getApproveStatusName = (statusId: number) => {
-        switch (statusId) {
-            case 1: return 'Đang Duyệt';
-            case 2: return 'Đã Duyệt';
-            case 3: return 'Bị Từ Chối';
-            default: return 'Không xác định';
-        }
-    };
+    // const getApproveStatusName = (statusId: number) => {
+    //     switch (statusId) {
+    //         case 1: return 'Đang Duyệt';
+    //         case 2: return 'Đã Duyệt';
+    //         case 3: return 'Bị Từ Chối';
+    //         default: return 'Không xác định';
+    //     }
+    // };
 
     const getApproveStatusColor = (statusId: number) => {
         switch (statusId) {
@@ -602,7 +613,7 @@ const UserApartmentList: React.FC = () => {
                                             )} flex items-center`}
                                         >
                                             {getApproveStatusIcon(apartment.approveStatusId)}
-                                            {getApproveStatusName(apartment.approveStatusId)}
+                                            {/* {getApproveStatusName(apartment.approveStatusId)} */}
                                         </span>
                                     </div>
                                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
