@@ -3,7 +3,6 @@ import {
   Table,
   Tag,
   Spin,
-  Alert,
   DatePicker,
   Button,
   Input,
@@ -235,7 +234,7 @@ const TransactionHistory: React.FC = () => {
             </Button>
           </div>
 
-          {error && (
+          {/* {error && (
             <Alert
               message="Error"
               description={error}
@@ -243,7 +242,7 @@ const TransactionHistory: React.FC = () => {
               showIcon
               className="mb-4"
             />
-          )}
+          )} */}
 
           {loading ? (
             <div className="text-center py-10">

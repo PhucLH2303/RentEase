@@ -7,6 +7,7 @@ import EnhancedPropertyGrid from "../component/grid";
 import StatisticsAndTestimonials from "../component/review/index";
 import axios from "axios";
 import EnhancedPropertyGrid1 from "../component/findfriend";
+import provincesData from "../assets/data.json";
 
 const { Option } = Select;
 
@@ -54,17 +55,51 @@ interface Category {
   status: boolean | null;
 }
 
-// interface ImageData {
-//   aptId: string;
-//   images: {
-//     id: number;
-//     imageUrl: string;
-//     createAt: string;
-//     updateAt: string;
-//   }[];
-// }
+interface ImageData {
+  aptId: string;
+  images: {
+    id: number;
+    imageUrl: string;
+    createAt: string;
+    updateAt: string;
+  }[];
+}
 
-// Mock data for statuses in case API fails
+// Updated Province interface to match actual data structure
+interface Ward {
+  Id: string;
+  Name: string;
+  Level?: string;
+}
+
+interface District {
+  Id: string;
+  Name: string;
+  Wards: Ward[];
+}
+
+interface Province {
+  Id: string;
+  Name: string;
+  Districts: District[];
+}
+
+interface Apartment {
+  aptId: string;
+  provinceId: number;
+  [key: string]: string | number | boolean | null; // Restrict to specific types
+}
+
+interface ApiResponse<T> {
+  statusCode: number;
+  message: string;
+  count: number;
+  currentPage: number;
+  totalPages: number;
+  data: T;
+}
+
+// Mock data for statuses
 const FALLBACK_STATUSES: Status[] = [
   {
     id: 1,
@@ -95,7 +130,7 @@ const FALLBACK_STATUSES: Status[] = [
   },
 ];
 
-// Mock data for categories in case API fails
+// Mock data for categories
 const FALLBACK_CATEGORIES: Category[] = [
   {
     id: 1,
@@ -117,40 +152,40 @@ const FALLBACK_CATEGORIES: Category[] = [
   },
 ];
 
-// Placeholder image for missing images
 const PLACEHOLDER_IMAGE = "https://via.placeholder.com/400x300?text=No+Image";
 
 const Home: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [apartments, setApartments] = useState<Apartment[]>([]);
   const [images, setImages] = useState<{ [key: string]: string }>({});
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<{
-    location: string;
-    duration: string;
+    provinceId: string | null;
     category: string | null;
     status: string | null;
   }>({
-    location: "hcm",
-    duration: "long",
+    provinceId: null,
     category: null,
     status: null,
   });
   const navigate = useNavigate();
-  
-  // Ensure consistent API base URL
   const API_BASE_URL = "https://renteasebe.io.vn";
 
-  // Centralized API call function with error handling
-  const fetchAPI = async (endpoint: string, headers: any) => {
+  const fetchAPI = async <T,>(
+    endpoint: string,
+    headers: { Authorization: string }
+  ): Promise<ApiResponse<T> | null> => {
     try {
-      const response = await axios.get(`${API_BASE_URL}${endpoint}`, { headers });
+      const response = await axios.get<ApiResponse<T>>(`${API_BASE_URL}${endpoint}`, {
+        headers,
+      });
       return response.data;
     } catch (error) {
       console.error(`Error fetching from ${endpoint}:`, error);
-      return { data: null };
+      return null;
     }
   };
 
@@ -158,6 +193,7 @@ const Home: React.FC = () => {
     const fetchData = async () => {
       const token = localStorage.getItem("accessToken");
       if (!token) {
+        setError("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
         navigate("/", { state: { from: "/home" } });
         return;
       }
@@ -169,45 +205,43 @@ const Home: React.FC = () => {
         const headers = { Authorization: `Bearer ${token}` };
 
         // Fetch posts
-        const postsData = await fetchAPI("/api/Post/GetAll", headers);
+        const postsData = await fetchAPI<Post[]>("/api/Post/GetAll", headers);
         const fetchedPosts = postsData?.data || [];
         setPosts(fetchedPosts);
 
-        // Fetch statuses - use fallback if API fails
-        const statusData = await fetchAPI("/api/AptStatus/GetAll", headers);
+        // Fetch apartments to get provinceId
+        const aptData = await fetchAPI<Apartment[]>("/api/Apt/GetAll", headers);
+        const fetchedApartments = aptData?.data || [];
+        setApartments(fetchedApartments);
+
+        // Fetch statuses
+        const statusData = await fetchAPI<Status[]>("/api/AptStatus/GetAll", headers);
         setStatuses(statusData?.data || FALLBACK_STATUSES);
 
-        // Fetch categories - use fallback if API fails
-        const categoryData = await fetchAPI("/api/AptCategory/GetAll", headers);
+        // Fetch categories
+        const categoryData = await fetchAPI<Category[]>("/api/AptCategory/GetAll", headers);
         setCategories(categoryData?.data || FALLBACK_CATEGORIES);
 
-        // Fetch images with error handling for each post
+        // Fetch images for all posts in a single request (if API supports batch fetching)
         if (fetchedPosts.length > 0) {
           const imageMap: { [key: string]: string } = {};
-          
-          for (const post of fetchedPosts) {
-            try {
-              const imageData = await fetchAPI(`/api/AptImage/GetByAptId?aptId=${post.aptId}`, headers);
-              
+          const imagePromises = fetchedPosts.map((post) =>
+            fetchAPI<ImageData>(`/api/AptImage/GetByAptId?aptId=${post.aptId}`, headers).then((imageData) => {
               if (imageData?.data?.images && imageData.data.images.length > 0) {
-                // Ensure consistent URL format without www. prefix
-                const imageUrl = imageData.data.images[0].imageUrl;
-                imageMap[post.aptId] = `${API_BASE_URL}${imageUrl}`;
+                imageMap[post.aptId] = `${API_BASE_URL}${imageData.data.images[0].imageUrl}`;
               } else {
                 imageMap[post.aptId] = PLACEHOLDER_IMAGE;
               }
-            } catch (error) {
-              imageMap[post.aptId] = PLACEHOLDER_IMAGE;
-            }
-          }
-          
+            })
+          );
+          await Promise.all(imagePromises);
           setImages(imageMap);
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Unknown error";
-        setError(`Failed to load data: ${errorMessage}`);
+        setError(`Không thể tải dữ liệu: ${errorMessage}`);
         notification.error({
-          message: "Error loading data",
+          message: "Lỗi tải dữ liệu",
           description: errorMessage,
           placement: "topRight",
         });
@@ -215,45 +249,46 @@ const Home: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [navigate]);
 
-  const handleFilterChange = (key: string, value: string | null) => {
+  const handleFilterChange = (key: keyof typeof filters, value: string | null) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const filteredPosts = posts.filter((post) => {
+    const apt = apartments.find((a) => a.aptId === post.aptId);
     return (
       (!filters.category || post.postCategoryId === Number(filters.category)) &&
-      (!filters.status || post.approveStatusId === Number(filters.status))
+      (!filters.status || post.approveStatusId === Number(filters.status)) &&
+      (!filters.provinceId || (apt && apt.provinceId.toString() === filters.provinceId))
     );
   });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-gray-100 mx-4">
-      {!loading && <Carousel posts={posts} />}
+      {/* Carousel Section */}
+      {!loading && <Carousel posts={filteredPosts} images={images} />}
 
+      {/* Search Bar */}
       <div className="flex flex-col md:flex-row items-center justify-center bg-white shadow-xl p-6 rounded-xl mx-auto mt-8 w-11/12 max-w-5xl transition-all duration-300 hover:shadow-2xl">
         <Select
-          value={filters.location}
-          className="w-full md:w-1/4 mb-4 md:mb-0 md:mr-4"
-          onChange={(value) => handleFilterChange("location", value)}
+          placeholder="Chọn tỉnh/thành phố"
+          className="w-full md:w-1/3 mb-4 md:mb-0 md:mr-4"
+          onChange={(value) => handleFilterChange("provinceId", value)}
+          allowClear
+          value={filters.provinceId}
         >
-          <Option value="hcm">Hồ Chí Minh</Option>
-          <Option value="hn">Hà Nội</Option>
-        </Select>
-        <Select
-          value={filters.duration}
-          className="w-full md:w-1/4 mb-4 md:mb-0 md:mr-4"
-          onChange={(value) => handleFilterChange("duration", value)}
-        >
-          <Option value="short">Ngắn hạn</Option>
-          <Option value="long">Dài hạn</Option>
+          {(provincesData as Province[]).map((province) => (
+            <Option key={province.Id} value={province.Id}>
+              {province.Name}
+            </Option>
+          ))}
         </Select>
         <Select
           placeholder="Loại căn hộ"
-          className="w-full md:w-1/4 mb-4 md:mb-0 md:mr-4"
+          className="w-full md:w-1/3 mb-4 md:mb-0 md:mr-4"
           onChange={(value) => handleFilterChange("category", value)}
           allowClear
           value={filters.category}
@@ -266,7 +301,7 @@ const Home: React.FC = () => {
         </Select>
         <Select
           placeholder="Trạng thái"
-          className="w-full md:w-1/4 mb-4 md:mb-0 md:mr-4"
+          className="w-full md:w-1/3 mb-4 md:mb-0 md:mr-4"
           onChange={(value) => handleFilterChange("status", value)}
           allowClear
           value={filters.status}
@@ -286,7 +321,7 @@ const Home: React.FC = () => {
         </Button>
       </div>
 
-      {/* Căn hộ cho thuê section */}
+      {/* Apartment Rental Section */}
       <div className="p-8">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">🏡 Căn hộ cho thuê</h2>
         {loading ? (
@@ -295,14 +330,18 @@ const Home: React.FC = () => {
           <div className="text-center text-red-600 p-4 bg-red-50 rounded-lg">
             <p>{error}</p>
           </div>
-        ) : filteredPosts.filter(post => post.status === true && post.postCategoryId === 2).length > 0 ? (
-          <EnhancedPropertyGrid posts={filteredPosts} categories={categories} images={images} />
+        ) : filteredPosts.filter((post) => post.status === true && post.postCategoryId === 2).length > 0 ? (
+          <EnhancedPropertyGrid
+            posts={filteredPosts.filter((post) => post.postCategoryId === 2)}
+            categories={categories}
+            images={images}
+          />
         ) : (
           <Empty description="Không có căn hộ cho thuê nào." />
         )}
       </div>
 
-      {/* Tìm bạn cùng phòng section */}
+      {/* Find Roommate Section */}
       <div className="p-8">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">🏡 Tìm bạn cùng phòng</h2>
         {loading ? (
@@ -311,14 +350,18 @@ const Home: React.FC = () => {
           <div className="text-center text-red-600 p-4 bg-red-50 rounded-lg">
             <p>{error}</p>
           </div>
-        ) : filteredPosts.filter(post => post.status === true && post.postCategoryId === 1).length > 0 ? (
-          <EnhancedPropertyGrid1 posts={filteredPosts} categories={categories} images={images} />
+        ) : filteredPosts.filter((post) => post.status === true && post.postCategoryId === 1).length > 0 ? (
+          <EnhancedPropertyGrid1
+            posts={filteredPosts.filter((post) => post.postCategoryId === 1)}
+            categories={categories}
+            images={images}
+          />
         ) : (
           <Empty description="Không có bạn cùng phòng nào." />
         )}
       </div>
 
-      {/* Statistics and testimonials section */}
+      {/* Statistics and Testimonials Section */}
       <div className="p-8">
         {loading ? (
           <Skeleton active className="w-full h-64" />
@@ -335,5 +378,3 @@ const Home: React.FC = () => {
 };
 
 export default Home;
-
-
