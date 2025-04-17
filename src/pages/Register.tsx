@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Form, Input, Radio, notification } from "antd";
-import { GoogleOutlined } from "@ant-design/icons";
 import axios from "axios";
 
 const Register: React.FC = () => {
@@ -17,10 +16,10 @@ const Register: React.FC = () => {
         });
     };
 
-    const onFinish = async (values: { 
-        fullName: string; 
-        username: string; 
-        password: string; 
+    const onFinish = async (values: {
+        fullName: string;
+        username: string;
+        password: string;
         confirmPassword: string;
         phoneNumber: string;
         roleId: number;
@@ -45,7 +44,7 @@ const Register: React.FC = () => {
                 {/* Image side */}
                 <div className="hidden md:block w-1/2 relative">
                     <img
-                        src="https://source.unsplash.com/800x600/?apartment,home"
+                        src="https://i.pinimg.com/736x/df/f9/e2/dff9e29b9d32effd2dd82d8b47f8e3a2.jpg"
                         alt="Register"
                         className="w-full h-full object-cover"
                     />
@@ -55,15 +54,14 @@ const Register: React.FC = () => {
                 {/* Registration form */}
                 <div className="w-full md:w-1/2 p-12 flex flex-col justify-center">
                     <div className="text-center">
-                        <img src="/logo.png" alt="Logo" className="mx-auto w-20" />
                         <h2 className="text-3xl font-bold mt-4 text-gray-800">Create Account</h2>
                         <p className="text-gray-500">Join our community today</p>
                     </div>
 
-                    <Form 
+                    <Form
                         form={form}
-                        layout="vertical" 
-                        onFinish={onFinish} 
+                        layout="vertical"
+                        onFinish={onFinish}
                         className="mt-6 space-y-4"
                         initialValues={{ roleId: 3 }}
                     >
@@ -147,16 +145,6 @@ const Register: React.FC = () => {
                             </Button>
                         </Form.Item>
                     </Form>
-
-                    <div className="text-center mt-4">
-                        <Button
-                            icon={<GoogleOutlined />}
-                            className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700"
-                            size="large"
-                        >
-                            Sign up with Google
-                        </Button>
-                    </div>
 
                     <p className="text-center mt-6 text-gray-600">
                         Already have an account? <a href="/" className="text-blue-600 hover:underline">Sign in</a>

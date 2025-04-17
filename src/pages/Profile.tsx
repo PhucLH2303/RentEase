@@ -203,7 +203,7 @@ const PostList = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
-        if (response.data.statusCode === 404|| response.data.statusCode === 500) {
+        if (response.data.statusCode === 404) {
           // Handle the 404 case specifically - no posts found
           setNoPosts(true);
           setPosts([]);

@@ -17,6 +17,7 @@ import SuccessPayment from "./pages/SuccessPayment";
 import FailedPayment from "./pages/FailedPayment";
 //Landlord
 import LoginAdmin from "./pages/admin/login/index";
+import ViewApt from "./pages/landlord/home/ViewApt";
 import DashboardAdmin from "./component/dashboard";
 import LandLordHome from "../src/pages/landlord/home";
 import CreatePost from "./pages/CreatePost";
@@ -37,7 +38,7 @@ const App: React.FC = () => {
         <Route path="/admin" element={<LoginAdmin />} />
         <Route path="/admin/dashboard" element={<DashboardAdmin />} />
         {/* LandLord */}
-        
+
         <Route path="dbhome" element={<Dashboard />} />
         <Route path="users" element={<Users />} />
         <Route path="manage" element={<Manage />} />
@@ -51,6 +52,7 @@ const App: React.FC = () => {
           <Route path="settings" element={<Settings />} />
           <Route path="transaction-history" element={<TransactionHistory />} />
           <Route path="apt-favorite" element={<FavoriteApartmentsPage />} />
+          <Route path="/home/apartment/view/:aptId" element={<ViewApt />} />
           <Route path="apartment/detail/:aptId" element={<ApartmentDetail />} />
           <Route path="apartment/:aptId" element={<ApartmentDetailInHome />} />
         </Route>

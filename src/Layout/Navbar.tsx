@@ -61,11 +61,6 @@ const Navbar: React.FC = () => {
           </Link>
         </li>
         <li>
-          <Link to="/settings" className="text-gray-200 hover:text-white transition duration-300 font-medium">
-            Settings
-          </Link>
-        </li>
-        <li>
           <Link to="/home/transaction-history" className="text-gray-200 hover:text-white transition duration-300 font-medium">
             Transaction History
           </Link>
