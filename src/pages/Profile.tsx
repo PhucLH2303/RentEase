@@ -1,8 +1,26 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { Drawer, List, Spin, Input, Button, Radio, Empty, Result } from "antd";
-import { SendOutlined, MessageOutlined, InboxOutlined } from "@ant-design/icons";
+import { 
+  Drawer, 
+  List, 
+  Spin, 
+  Input, 
+  Button, 
+  Radio, 
+  Badge, 
+  Modal, 
+  Card, 
+  message,
+  Empty 
+} from "antd";
+import { 
+  SendOutlined, 
+  MessageOutlined, 
+  NotificationOutlined,
+  ShoppingCartOutlined,
+  PlusCircleOutlined
+} from "@ant-design/icons";
 
 interface Post {
   postId: string;
@@ -12,7 +30,18 @@ interface Post {
   moveOutDate: string;
   totalSlot: number;
   currentSlot: number;
-  status: boolean; // true là archive, false là active
+  aptId: string;
+  status: boolean;
+}
+
+interface AptImage {
+  aptId: string;
+  images: {
+    id: number;
+    imageUrl: string;
+    createAt: string;
+    updateAt: string;
+  }[];
 }
 
 interface Conversation {
@@ -31,6 +60,24 @@ interface Message {
   isSeen: boolean;
 }
 
+interface UserAccount {
+  accountId: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  dateOfBirth: string | null;
+  genderId: number | null;
+  oldId: number | null;
+  avatarUrl: string | null;
+  roleId: number;
+  publicPostTimes: number;
+  isVerify: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+  deletedAt: string | null;
+  status: boolean;
+}
+
 interface ApiResponse<T> {
   statusCode: number;
   message: string;
@@ -38,6 +85,54 @@ interface ApiResponse<T> {
   currentPage: number;
   totalPages: number;
   data: T;
+}
+
+interface Package {
+  id: string;
+  name: string;
+  note: string;
+  times: number;
+  days: number;
+  amount: number;
+  postCategoryId: number;
+  createdAt: string;
+  updatedAt: string | null;
+  deletedAt: string | null;
+  status: null | boolean;
+}
+
+interface PaymentLink {
+  orderRes: {
+    orderId: string;
+    orderTypeId: string;
+    orderCode: string;
+    postId: string | null;
+    senderId: string;
+    totalAmount: number;
+    note: string;
+    createdAt: string;
+    paidAt: string | null;
+    cancelledAt: string | null;
+    paymentStatusId: number;
+  };
+  payosRes: {
+    code: string;
+    desc: string;
+    data: {
+      bin: string;
+      accountNumber: string;
+      accountName: string;
+      amount: number;
+      description: string;
+      orderCode: number;
+      currency: string;
+      paymentLinkId: string;
+      status: string;
+      checkoutUrl: string;
+      qrCode: string;
+    };
+    signature: string;
+  };
 }
 
 const PostList = () => {
@@ -53,7 +148,16 @@ const PostList = () => {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState<string>("");
   const [sending, setSending] = useState<boolean>(false);
-  const [filterStatus, setFilterStatus] = useState<string>("all"); // Thêm state cho bộ lọc: 'all', 'active', 'archive'
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [aptImages, setAptImages] = useState<Record<string, string[]>>({});
+  const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
+  const [loadingAccount, setLoadingAccount] = useState<boolean>(true);
+  const [isPurchaseModalVisible, setIsPurchaseModalVisible] = useState<boolean>(false);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState<boolean>(false);
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [creatingPayment, setCreatingPayment] = useState<boolean>(false);
+  const [noPosts, setNoPosts] = useState<boolean>(false);
 
   const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
   const userString = localStorage.getItem("user");
@@ -64,14 +168,33 @@ const PostList = () => {
     if (!token) {
       setError("Bạn cần đăng nhập để xem bài đăng!");
       setLoading(false);
+      setLoadingAccount(false);
       return;
     }
 
     if (!accountId) {
       setError("Không thể tải bài đăng: ID tài khoản không hợp lệ!");
       setLoading(false);
+      setLoadingAccount(false);
       return;
     }
+
+    const fetchUserAccount = async () => {
+      try {
+        const response = await axios.get<ApiResponse<UserAccount>>(
+          `https://renteasebe.io.vn/api/Accounts/GetById?id=${accountId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        if (response.data.statusCode === 200) {
+          setUserAccount(response.data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching user account info:", err);
+      } finally {
+        setLoadingAccount(false);
+      }
+    };
 
     const fetchPosts = async () => {
       try {
@@ -79,17 +202,57 @@ const PostList = () => {
           `https://renteasebe.io.vn/api/Post/GetByAccountId?accountId=${accountId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        setPosts(response.data.data as Post[]);
-      } catch (err) {
+        
+        if (response.data.statusCode === 404) {
+          // Handle the 404 case specifically - no posts found
+          setNoPosts(true);
+          setPosts([]);
+        } else if (response.data.statusCode === 200 && response.data.data) {
+          const fetchedPosts = response.data.data as Post[];
+          setPosts(fetchedPosts);
+          
+          // Fetch images for each post
+          fetchedPosts.forEach(post => {
+            if (post.aptId) {
+              fetchAptImages(post.aptId);
+            }
+          });
+        } else {
+          setPosts([]);
+        }
+      } catch (err: any) {
         console.error("Error fetching posts:", err);
-        setError("Lỗi khi tải dữ liệu bài đăng!");
+        if (err.response && err.response.status === 404) {
+          setNoPosts(true);
+        } else {
+          setError("Lỗi khi tải dữ liệu bài đăng!");
+        }
       } finally {
         setLoading(false);
       }
     };
 
+    fetchUserAccount();
     fetchPosts();
   }, [token, accountId]);
+
+  const fetchAptImages = async (aptId: string) => {
+    try {
+      const response = await axios.get<ApiResponse<AptImage>>(
+        `https://renteasebe.io.vn/api/AptImage/GetByAptId?aptId=${aptId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.statusCode === 200 && response.data.data.images?.length > 0) {
+        setAptImages(prev => ({
+          ...prev,
+          [aptId]: response.data.data.images.map(img => `https://renteasebe.io.vn${img.imageUrl}`)
+        }));
+      }
+    } catch (err) {
+      console.error(`Error fetching images for apt ${aptId}:`, err);
+    }
+  };
 
   const showDrawer = async () => {
     setIsDrawerVisible(true);
@@ -230,11 +393,92 @@ const PostList = () => {
     }
   };
 
-  // Lọc danh sách bài đăng theo trạng thái
+  // Function to show purchase modal and fetch packages
+  const showPurchaseModal = async () => {
+    setIsPurchaseModalVisible(true);
+    setLoadingPackages(true);
+    
+    try {
+      const response = await axios.get<ApiResponse<Package[]>>(
+        "https://renteasebe.io.vn/api/OrderType/GetAll",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.statusCode === 200) {
+        // Filter packages with postCategoryId == 1
+        const filteredPackages = response.data.data.filter(pkg => pkg.postCategoryId === 1);
+        // Sort packages by amount (price)
+        filteredPackages.sort((a, b) => a.amount - b.amount);
+        setPackages(filteredPackages);
+      }
+    } catch (err) {
+      console.error("Error fetching packages:", err);
+      message.error("Không thể tải danh sách gói đăng bài");
+    } finally {
+      setLoadingPackages(false);
+    }
+  };
+
+  const closePurchaseModal = () => {
+    setIsPurchaseModalVisible(false);
+    setSelectedPackage(null);
+  };
+
+  const handlePackageSelect = (packageId: string) => {
+    setSelectedPackage(packageId);
+  };
+
+  const createPaymentLink = async () => {
+    if (!selectedPackage) {
+      message.warning("Vui lòng chọn một gói đăng bài");
+      return;
+    }
+
+    setCreatingPayment(true);
+    try {
+      const selectedPkg = packages.find(pkg => pkg.id === selectedPackage);
+      
+      const response = await axios.post<ApiResponse<PaymentLink>>(
+        "https://renteasebe.io.vn/api/Payment/Create-Payment-Link",
+        {
+          orderTypeId: selectedPackage,
+          note: `Pay:${selectedPkg?.name}`,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.statusCode === 200) {
+        const checkoutUrl = response.data.data.payosRes.data.checkoutUrl;
+        // Open the checkout URL in a new tab
+        window.open(checkoutUrl, "_blank");
+        closePurchaseModal();
+        message.success("Đang chuyển đến trang thanh toán");
+      } else {
+        message.error("Không thể tạo link thanh toán");
+      }
+    } catch (err) {
+      console.error("Error creating payment link:", err);
+      message.error("Lỗi khi tạo liên kết thanh toán");
+    } finally {
+      setCreatingPayment(false);
+    }
+  };
+
+  // Navigate to create post page
+  const navigateToCreatePost = () => {
+    window.location.href = "/home/post/create";
+  };
+
+  // Filter posts by status
   const filteredPosts = posts.filter((post) => {
     if (filterStatus === "all") return true;
-    if (filterStatus === "archive") return post.status === true;
-    if (filterStatus === "active") return post.status === false;
+    if (filterStatus === "active") return post.status === true;
+    if (filterStatus === "archive") return post.status === false;
     return true;
   });
 
@@ -242,73 +486,139 @@ const PostList = () => {
     setFilterStatus(e.target.value);
   };
 
-  if (loading) return (
-    <div className="flex justify-center items-center py-20">
-      <Spin size="large" tip="Đang tải bài đăng..." />
-    </div>
-  );
+  const formatPrice = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  };
 
-  if (error) return (
-    <Result
-      status="warning"
-      title="Chưa có bài đăng"
-      // subTitle={error}
-      extra={
-        <Link to="/home">
-          <Button type="primary">Quay lại trang chủ</Button>
-        </Link>
-      }
-    />
-  );
+  if (loading) return <p className="text-center text-gray-600">Đang tải...</p>;
+  if (error) return <p className="text-center text-red-500">{error}</p>;
 
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-gray-800">Bài đăng của tôi</h2>
-        <Button
-          type="primary"
-          icon={<MessageOutlined />}
-          onClick={showDrawer}
-          size="large"
-        >
-          Chat
-        </Button>
+        <div className="flex items-center gap-4">
+          {loadingAccount ? (
+            <Spin size="small" />
+          ) : userAccount && userAccount.roleId === 2 && (
+            <>
+              <Badge count={userAccount.publicPostTimes} overflowCount={99} color="#52c41a">
+                <div className="flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-lg border border-green-200">
+                  <NotificationOutlined className="mr-1" />
+                  <span>Lần đăng khả dụng</span>
+                </div>
+              </Badge>
+              <Button 
+                type="primary"
+                icon={<ShoppingCartOutlined />}
+                onClick={showPurchaseModal}
+                style={{ background: "#13c2c2", borderColor: "#13c2c2" }}
+              >
+                Mua thêm lượt
+              </Button>
+            </>
+          )}
+          <Button
+            type="primary"
+            icon={<MessageOutlined />}
+            onClick={showDrawer}
+            size="large"
+          >
+            Chat
+          </Button>
+        </div>
       </div>
 
-      {/* Bộ lọc trạng thái */}
-      <div className="mb-4">
-        <Radio.Group value={filterStatus} onChange={handleFilterChange} buttonStyle="solid">
-          <Radio.Button value="all">Tất cả</Radio.Button>
-          <Radio.Button value="active">Đang hoạt động</Radio.Button>
-          <Radio.Button value="archive">Đã lưu trữ</Radio.Button>
-        </Radio.Group>
-      </div>
+      {/* Show filter only if we have posts */}
+      {!noPosts && posts.length > 0 && (
+        <div className="mb-4">
+          <Radio.Group value={filterStatus} onChange={handleFilterChange} buttonStyle="solid">
+            <Radio.Button value="all">Tất cả</Radio.Button>
+            <Radio.Button value="active">Đang hoạt động</Radio.Button>
+            <Radio.Button value="archive">Đã lưu trữ</Radio.Button>
+          </Radio.Group>
+        </div>
+      )}
 
-      {posts.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Bạn chưa có bài đăng nào."
-          className="py-10"
-        >
-          <Link to="/home/create">
-            <Button type="primary">Tạo bài đăng mới</Button>
-          </Link>
-        </Empty>
+      {noPosts || posts.length === 0 ? (
+        <div className="bg-white rounded-xl shadow p-12 text-center">
+          <Empty 
+            description={
+              <span className="text-gray-500 text-lg">
+                Bạn chưa có bài đăng nào
+              </span>
+            }
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+          <div className="mt-8">
+            {userAccount && userAccount.roleId === 2 && userAccount.publicPostTimes > 0 ? (
+              <Button 
+                type="primary" 
+                size="large" 
+                icon={<PlusCircleOutlined />} 
+                onClick={navigateToCreatePost}
+              >
+                Tạo bài đăng mới
+              </Button>
+            ) : userAccount && userAccount.roleId === 2 ? (
+              <div className="space-y-4">
+                <p className="text-yellow-600">Bạn đã hết lượt đăng bài, hãy mua thêm để tiếp tục!</p>
+                <Button 
+                  type="primary" 
+                  size="large" 
+                  icon={<ShoppingCartOutlined />} 
+                  onClick={showPurchaseModal}
+                  style={{ background: "#13c2c2", borderColor: "#13c2c2" }}
+                >
+                  Mua lượt đăng bài
+                </Button>
+              </div>
+            ) : (
+              <p className="text-gray-500">Hãy liên hệ với quản trị viên để được hỗ trợ</p>
+            )}
+          </div>
+        </div>
       ) : filteredPosts.length === 0 ? (
-        <Empty
-          description="Không có bài đăng nào phù hợp với bộ lọc."
-          className="py-10"
-        />
+        <div className="bg-white rounded-xl shadow p-6 text-center">
+          <p className="text-gray-600 mt-4">Không có bài đăng nào phù hợp với bộ lọc.</p>
+          {userAccount && userAccount.roleId === 2 && userAccount.publicPostTimes > 0 && (
+            <Button 
+              type="primary" 
+              className="mt-4"
+              icon={<PlusCircleOutlined />} 
+              onClick={navigateToCreatePost}
+            >
+              Tạo bài đăng mới
+            </Button>
+          )}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPosts.map((post) => (
-            <div
-              key={post.postId}
-              className={`bg-white border ${post.status ? 'border-amber-300' : 'border-gray-200'} p-4 rounded-xl shadow-md hover:shadow-lg transition`}
+            <div 
+              key={post.postId} 
+              className={`bg-white border ${post.status ? 'border-green-300' : 'border-amber-300'} p-4 rounded-xl shadow-md hover:shadow-lg transition`}
             >
+              {/* Image section */}
+              <div className="mb-3 aspect-video rounded-lg overflow-hidden bg-gray-100">
+                {aptImages[post.aptId] && aptImages[post.aptId].length > 0 ? (
+                  <img 
+                    src={aptImages[post.aptId][0]} 
+                    alt={post.title} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    Không có ảnh
+                  </div>
+                )}
+              </div>
+              
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-lg font-semibold text-gray-900 truncate">{post.title}</h3>
-                {post.status && (
+                {post.status ? (
+                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Đang hoạt động</span>
+                ) : (
                   <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded">Đã lưu trữ</span>
                 )}
               </div>
@@ -343,11 +653,7 @@ const PostList = () => {
         width={300}
       >
         {conversations.length === 0 ? (
-          <Empty
-            image={<InboxOutlined style={{ fontSize: 50, color: '#bfbfbf' }} />}
-            description="Không có cuộc trò chuyện nào."
-            className="py-10"
-          />
+          <p className="text-gray-600">Không có cuộc trò chuyện nào.</p>
         ) : (
           <div className="space-y-3">
             {conversations.map((conv) => {
@@ -387,9 +693,9 @@ const PostList = () => {
       >
         <div style={{ height: "calc(100% - 60px)", display: "flex", flexDirection: "column" }}>
           {messagesLoading ? (
-            <div className="flex justify-center items-center h-full">
-              <Spin tip="Đang tải tin nhắn..." />
-            </div>
+            <Spin tip="Đang tải tin nhắn..." />
+          ) : messages.length === 0 ? (
+            <p className="text-gray-600">Chưa có tin nhắn nào.</p>
           ) : (
             <List
               dataSource={messages}
@@ -412,14 +718,7 @@ const PostList = () => {
                   </div>
                 </List.Item>
               )}
-              locale={{
-                emptyText: (
-                  <Empty
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description="Chưa có tin nhắn nào"
-                  />
-                )
-              }}
+              locale={{ emptyText: "Chưa có tin nhắn" }}
               style={{ flex: 1, overflowY: "auto" }}
             />
           )}
@@ -441,6 +740,61 @@ const PostList = () => {
           </div>
         </div>
       </Drawer>
+
+      {/* Purchase Modal */}
+      <Modal
+        title="Mua thêm lượt đăng bài"
+        open={isPurchaseModalVisible}
+        onCancel={closePurchaseModal}
+        footer={[
+          <Button key="cancel" onClick={closePurchaseModal}>
+            Hủy
+          </Button>,
+          <Button 
+            key="pay" 
+            type="primary" 
+            onClick={createPaymentLink} 
+            loading={creatingPayment}
+            disabled={!selectedPackage}
+          >
+            Tiến hành thanh toán
+          </Button>
+        ]}
+        width={700}
+      >
+        {loadingPackages ? (
+          <div className="text-center py-8">
+            <Spin tip="Đang tải danh sách gói..." />
+          </div>
+        ) : (
+          <>
+            <p className="mb-4">Chọn gói đăng bài phù hợp với nhu cầu của bạn:</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {packages.map((pkg) => (
+                <Card
+                  key={pkg.id}
+                  className={`cursor-pointer transition-all ${selectedPackage === pkg.id ? 'border-blue-500 shadow-lg' : 'border-gray-200'}`}
+                  onClick={() => handlePackageSelect(pkg.id)}
+                  style={{ 
+                    borderWidth: selectedPackage === pkg.id ? '2px' : '1px',
+                  }}
+                  hoverable
+                >
+                  <div className="text-center">
+                    <h3 className="text-lg font-bold">{pkg.name}</h3>
+                    <p className="text-gray-500">{pkg.note}</p>
+                    <div className="my-3">
+                      <p className="text-blue-600 font-bold text-2xl">{formatPrice(pkg.amount)}</p>
+                      <p className="text-green-600">{pkg.times} lượt đăng</p>
+                      <p className="text-gray-500">Hiệu lực: {pkg.days} ngày</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 };
