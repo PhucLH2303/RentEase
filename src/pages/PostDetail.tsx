@@ -12,8 +12,8 @@ interface Post {
   moveInDate: string;
   moveOutDate: string;
   createdAt: string;
-  aptId: string; // Thêm aptId
-  status: boolean; 
+  aptId: string;
+  status: boolean;
 }
 
 interface Apt {
@@ -45,8 +45,9 @@ interface OrderType {
   id: string;
   name: string;
   note: string;
-  month: number;
+  day: number;
   amount: number;
+  postCategoryId: number;
 }
 
 const PostDetail = () => {
@@ -60,10 +61,12 @@ const PostDetail = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentUrl] = useState<string | null>(null);
+  const [showStatusConfirm, setShowStatusConfirm] = useState<boolean>(false);
+  const [newStatus, setNewStatus] = useState<boolean | null>(null);
 
-  // Sử dụng "accessToken" thay vì "token" để đồng bộ với Login
   const token = localStorage.getItem("accessToken");
   const roleId = localStorage.getItem("roleId");
+
   useEffect(() => {
     const fetchData = async () => {
       if (!token) {
@@ -94,24 +97,22 @@ const PostDetail = () => {
           setAptImages(imagesData.images || []);
         }
 
-        // Fetch order types
-        const orderTypesResponse = await axios.get("https://www.renteasebe.io.vn/api/OrderType/GetAll?page=1&pageSize=10", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        let fetchedOrderTypes = orderTypesResponse.data.data as OrderType[];
+        // Fetch order types only if roleId != 2
+        if (roleId !== "2") {
+          const orderTypesResponse = await axios.get("https://www.renteasebe.io.vn/api/OrderType/GetAll?page=1&pageSize=10", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          let fetchedOrderTypes = orderTypesResponse.data.data as OrderType[];
 
-        // Lọc orderTypes dựa trên roleId
-        if (roleId === "2") {
-          fetchedOrderTypes = fetchedOrderTypes.filter(
-            (orderType) => orderType.name.toLowerCase() !== "findhomie"
-          );
-        } else if (roleId === "3") {
-          fetchedOrderTypes = fetchedOrderTypes.filter(
-            (orderType) => orderType.name.toLowerCase() === "findhomie"
-          );
+          // Filter order types based on roleId
+          if (roleId === "3") {
+            fetchedOrderTypes = fetchedOrderTypes.filter(
+              (orderType) => orderType.postCategoryId === 2
+            );
+          }
+
+          setOrderTypes(fetchedOrderTypes);
         }
-
-        setOrderTypes(fetchedOrderTypes);
       } catch (err) {
         setError("Lỗi khi tải dữ liệu!");
         console.error("Fetch error:", err);
@@ -132,7 +133,7 @@ const PostDetail = () => {
         postId: post.postId,
         amount: orderType.amount,
         incurredCost: 0,
-        note: `${orderType.month} tháng`,
+        note: `${orderType.day} ngày`,
       };
 
       const response = await axios.post(
@@ -155,6 +156,43 @@ const PostDetail = () => {
     }
   };
 
+  const handleStatusToggle = () => {
+    if (!post) return;
+    
+    // Set new status (opposite of current)
+    setNewStatus(!post.status);
+    setShowStatusConfirm(true);
+  };
+
+  const handleStatusChange = async () => {
+    if (!post || newStatus === null || !token) return;
+
+    try {
+      const apiUrl = newStatus 
+        ? `https://renteasebe.io.vn/api/Post/Active?id=${post.postId}` 
+        : `https://renteasebe.io.vn/api/Post/Deactive?id=${post.postId}`;
+
+      await axios.put(apiUrl, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Update local post state
+      setPost({...post, status: newStatus});
+      setShowStatusConfirm(false);
+      
+      // Show success message
+      alert(newStatus ? "Đã chuyển bài viết sang chế độ Public" : "Đã chuyển bài viết sang chế độ Private");
+    } catch (err) {
+      console.error("Status change error:", err);
+      alert("Đã xảy ra lỗi khi thay đổi trạng thái bài viết");
+    }
+  };
+
+  const cancelStatusChange = () => {
+    setShowStatusConfirm(false);
+    setNewStatus(null);
+  };
+
   if (loading) return <p className="text-center text-gray-600">Đang tải...</p>;
   if (error) return <p className="text-center text-red-500">{error}</p>;
   if (!post) return <p className="text-center text-gray-600">Không tìm thấy bài đăng.</p>;
@@ -167,7 +205,16 @@ const PostDetail = () => {
 
       {/* Post Details */}
       <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-lg mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">{post.title}</h2>
+        <div className="flex justify-between items-start mb-4">
+          <h2 className="text-2xl font-bold text-gray-900">{post.title}</h2>
+          <span
+            className={`text-xs font-bold px-2 py-1 rounded-full ${
+              post.status ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+            }`}
+          >
+            {post.status ? "Public" : "Private"}
+          </span>
+        </div>
         <p className="text-gray-600 text-sm truncate">
           <strong>Ghi chú:</strong> {post.note}
         </p>
@@ -180,16 +227,6 @@ const PostDetail = () => {
         <p className="text-blue-600 font-semibold">
           <strong>Còn chỗ:</strong> {post.totalSlot - post.currentSlot} / {post.totalSlot}
         </p>
-        <div className="flex justify-between items-start">
-              <h3 className="text-xl font-semibold text-gray-900 line-clamp-1">{post.title}</h3>
-              <span
-                className={`text-xs font-bold px-2 py-1 rounded-full ${
-                  post.status ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-                }`}
-              >
-                {post.status ? "Public" : "Private"}
-              </span>
-            </div>
       </div>
 
       {/* Apartment Details */}
@@ -253,37 +290,100 @@ const PostDetail = () => {
         </div>
       )}
 
-      {/* Payment Options */}
-      <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-lg">
-        <h3 className="text-xl font-semibold mb-4">Chọn gói thanh toán</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {orderTypes.map((orderType) => (
-            <div
-              key={orderType.id}
-              className="border p-4 rounded-lg hover:bg-gray-100 cursor-pointer"
-              onClick={() => handleCreatePayment(orderType)}
-            >
-              <h4 className="font-bold text-lg capitalize">{orderType.name}</h4>
-              <p className="text-gray-600">{orderType.note}</p>
-              <p className="text-blue-600 font-semibold">{orderType.amount.toLocaleString()} VNĐ</p>
+      {/* Status Toggle for roleId == 2 */}
+      {roleId === "2" && (
+        <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-lg mb-6">
+          <h3 className="text-xl font-semibold mb-4">Trạng thái bài đăng</h3>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-700">
+                Trạng thái hiện tại: 
+                <span className={`ml-2 font-bold ${post.status ? "text-green-600" : "text-yellow-600"}`}>
+                  {post.status ? "Public" : "Private"}
+                </span>
+              </p>
             </div>
-          ))}
-        </div>
-
-        {paymentUrl && (
-          <div className="mt-4 p-4 bg-green-100 rounded">
-            <p className="font-bold">Checkout URL:</p>
-            <a
-              href={paymentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline"
-            >
-              {paymentUrl}
-            </a>
+            <div>
+              <button
+                onClick={handleStatusToggle}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  post.status 
+                    ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" 
+                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                }`}
+              >
+                Chuyển sang {post.status ? "Private" : "Public"}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Status Confirmation Dialog */}
+      {showStatusConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4">Xác nhận thay đổi</h3>
+            {newStatus ? (
+              <p className="text-gray-700 mb-4">
+                Bạn sẽ bị trừ 1 lượt đăng bài và không được hoàn lại khi chuyển từ Private sang Public.
+              </p>
+            ) : (
+              <p className="text-gray-700 mb-4">
+                Bạn sẽ không được hoàn lại lượt đăng bài khi chuyển từ Public sang Private.
+              </p>
+            )}
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={cancelStatusChange}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleStatusChange}
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Options - Only shown for non-roleId 2 users */}
+      {roleId !== "2" && orderTypes.length > 0 && (
+        <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-lg">
+          <h3 className="text-xl font-semibold mb-4">Chọn gói thanh toán</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {orderTypes.map((orderType) => (
+              <div
+                key={orderType.id}
+                className="border p-4 rounded-lg hover:bg-gray-100 cursor-pointer"
+                onClick={() => handleCreatePayment(orderType)}
+              >
+                <h4 className="font-bold text-lg capitalize">{orderType.name}</h4>
+                <p className="text-gray-600">{orderType.note}</p>
+                <p className="text-blue-600 font-semibold">{orderType.amount.toLocaleString()} VNĐ</p>
+              </div>
+            ))}
+          </div>
+
+          {paymentUrl && (
+            <div className="mt-4 p-4 bg-green-100 rounded">
+              <p className="font-bold">Checkout URL:</p>
+              <a
+                href={paymentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
+              >
+                {paymentUrl}
+              </a>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
