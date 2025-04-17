@@ -7,6 +7,7 @@ import {
   Button,
   Input,
   Space,
+  Alert,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
@@ -179,8 +180,7 @@ const TransactionHistory: React.FC = () => {
         { text: "Processing", value: 3 },
         { text: "Cancelled", value: 4 },
       ],
-      onFilter: (value, record) =>
-        record.paymentStatusId === Number(value),
+      onFilter: (value, record) => record.paymentStatusId === Number(value),
     },
     {
       title: "Note",
@@ -234,7 +234,8 @@ const TransactionHistory: React.FC = () => {
             </Button>
           </div>
 
-          {/* {error && (
+          {/* Error Alert */}
+          {error && (
             <Alert
               message="Error"
               description={error}
@@ -242,7 +243,7 @@ const TransactionHistory: React.FC = () => {
               showIcon
               className="mb-4"
             />
-          )} */}
+          )}
 
           {loading ? (
             <div className="text-center py-10">
