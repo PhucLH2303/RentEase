@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button, Checkbox, Form, Input, notification } from "antd";
-import { GoogleOutlined } from "@ant-design/icons";
 import axios from "axios";
 
 const Login: React.FC = () => {
@@ -80,9 +79,6 @@ const Login: React.FC = () => {
                             <Form.Item name="remember" valuePropName="checked">
                                 <Checkbox>Remember me</Checkbox>
                             </Form.Item>
-                            <Link to="/forgot-password" className="text-blue-600 hover:underline">
-                                Forgot password?
-                            </Link>
                         </div>
                         <Form.Item>
                             <Button
@@ -96,16 +92,6 @@ const Login: React.FC = () => {
                             </Button>
                         </Form.Item>
                     </Form>
-                    <div className="text-center mt-4">
-                        <Button
-                            icon={<GoogleOutlined />}
-                            className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700"
-                            size="large"
-                            onClick={() => notification.info({ message: "Coming soon!" })}
-                        >
-                            Sign in with Google
-                        </Button>
-                    </div>
                     <p className="text-center mt-6 text-gray-600">
                         Don't have an account?{" "}
                         <Link to="/register" className="text-blue-600 hover:underline">

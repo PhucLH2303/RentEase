@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { Drawer, List, Spin, Input, Button, Radio } from "antd";
-import { SendOutlined, MessageOutlined } from "@ant-design/icons";
+import { Drawer, List, Spin, Input, Button, Radio, Empty, Result } from "antd";
+import { SendOutlined, MessageOutlined, InboxOutlined } from "@ant-design/icons";
 
 interface Post {
   postId: string;
@@ -242,9 +242,24 @@ const PostList = () => {
     setFilterStatus(e.target.value);
   };
 
-  if (loading) return <p className="text-center text-gray-600">Đang tải...</p>;
-  if (error) return <p className="text-center text-red-500">{error}</p>;
-  if (posts.length === 0) return <p className="text-center text-gray-600">Không tìm thấy bài đăng nào.</p>;
+  if (loading) return (
+    <div className="flex justify-center items-center py-20">
+      <Spin size="large" tip="Đang tải bài đăng..." />
+    </div>
+  );
+
+  if (error) return (
+    <Result
+      status="warning"
+      title="Chưa có bài đăng"
+      // subTitle={error}
+      extra={
+        <Link to="/home">
+          <Button type="primary">Quay lại trang chủ</Button>
+        </Link>
+      }
+    />
+  );
 
   return (
     <div className="p-4">
@@ -269,13 +284,26 @@ const PostList = () => {
         </Radio.Group>
       </div>
 
-      {filteredPosts.length === 0 ? (
-        <p className="text-center text-gray-600 mt-8">Không có bài đăng nào phù hợp với bộ lọc.</p>
+      {posts.length === 0 ? (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="Bạn chưa có bài đăng nào."
+          className="py-10"
+        >
+          <Link to="/home/create">
+            <Button type="primary">Tạo bài đăng mới</Button>
+          </Link>
+        </Empty>
+      ) : filteredPosts.length === 0 ? (
+        <Empty
+          description="Không có bài đăng nào phù hợp với bộ lọc."
+          className="py-10"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPosts.map((post) => (
-            <div 
-              key={post.postId} 
+            <div
+              key={post.postId}
               className={`bg-white border ${post.status ? 'border-amber-300' : 'border-gray-200'} p-4 rounded-xl shadow-md hover:shadow-lg transition`}
             >
               <div className="flex justify-between items-start mb-2">
@@ -315,7 +343,11 @@ const PostList = () => {
         width={300}
       >
         {conversations.length === 0 ? (
-          <p className="text-gray-600">Không có cuộc trò chuyện nào.</p>
+          <Empty
+            image={<InboxOutlined style={{ fontSize: 50, color: '#bfbfbf' }} />}
+            description="Không có cuộc trò chuyện nào."
+            className="py-10"
+          />
         ) : (
           <div className="space-y-3">
             {conversations.map((conv) => {
@@ -355,9 +387,9 @@ const PostList = () => {
       >
         <div style={{ height: "calc(100% - 60px)", display: "flex", flexDirection: "column" }}>
           {messagesLoading ? (
-            <Spin tip="Đang tải tin nhắn..." />
-          ) : messages.length === 0 ? (
-            <p className="text-gray-600">Chưa có tin nhắn nào.</p>
+            <div className="flex justify-center items-center h-full">
+              <Spin tip="Đang tải tin nhắn..." />
+            </div>
           ) : (
             <List
               dataSource={messages}
@@ -380,7 +412,14 @@ const PostList = () => {
                   </div>
                 </List.Item>
               )}
-              locale={{ emptyText: "Chưa có tin nhắn" }}
+              locale={{
+                emptyText: (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="Chưa có tin nhắn nào"
+                  />
+                )
+              }}
               style={{ flex: 1, overflowY: "auto" }}
             />
           )}
