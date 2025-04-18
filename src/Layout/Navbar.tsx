@@ -55,6 +55,13 @@ const Navbar: React.FC = () => {
             </Link>
           </li>
         )}
+         {/* {roleId === 3 && (
+          <li>
+            <Link to="/home/request" className="text-gray-200 hover:text-white transition duration-300 font-medium">
+            Manage request
+            </Link>
+          </li>
+        )} */}
         <li>
           <Link to="/home/profile" className="text-gray-200 hover:text-white transition duration-300 font-medium">
             Post Manage

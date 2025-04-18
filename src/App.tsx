@@ -24,6 +24,8 @@ import CreatePost from "./pages/CreatePost";
 import FavoriteApartmentsPage from "./pages/FavoriteApartmentsPage";
 import PostDetailPage from "./pages/PostDetailPage";
 import TransactionHistory from "./pages/TransactionHistory";
+import EditPost from "./pages/EditPost";
+// import ManageRequest from "./pages/ManageRequest";
 
 const App: React.FC = () => {
   return (
@@ -45,7 +47,9 @@ const App: React.FC = () => {
         <Route path="/home" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="profile" element={<Profile />} />
+          {/* <Route path="request" element={<ManageRequest />} /> */}
           <Route path="profile/:id" element={<PostDetail />} />
+          <Route path="profile/edit/:postId" element={<EditPost />} />
           <Route path="create-post" element={<CreatePost />} />
           <Route path="post/:postId" element={<PostDetailPage />} />
           <Route path="landlord-home" element={<LandLordHome />} />
