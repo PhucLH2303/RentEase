@@ -7,6 +7,7 @@ import {
   Button,
   Input,
   Space,
+  Alert,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
@@ -233,6 +234,16 @@ const TransactionHistory: React.FC = () => {
             </Button>
           </div>
 
+          {/* Error Alert */}
+          {error && (
+            <Alert
+              message="Error"
+              description="No data found."
+              type="error"
+              showIcon
+              className="mb-4"
+            />
+          )}
 
           {loading ? (
             <div className="text-center py-10">
