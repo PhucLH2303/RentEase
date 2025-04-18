@@ -633,9 +633,9 @@ const PostDetailPage: React.FC = () => {
               <Tag icon={<CalendarOutlined />}>
                 Đăng ngày: {formatDate(postDetail.createdAt)}
               </Tag>
-              <Tag color={approveStatusMap[postDetail.approveStatusId]?.color || "blue"}>
+              {/* <Tag color={approveStatusMap[postDetail.approveStatusId]?.color || "blue"}>
                 {approveStatusMap[postDetail.approveStatusId]?.text || "Không xác định"}
-              </Tag>
+              </Tag> */}
             </Space>
             {apartmentDetail && (
               <Paragraph>

@@ -11,6 +11,8 @@ interface PostFormData {
   title: string;
   totalSlot: number;
   currentSlot: number;
+  rentPrice: number; // Added field
+  pilePrice: number; // Added field
   genderId: number;
   oldId: number;
   note: string;
@@ -80,6 +82,8 @@ const CreatePost: React.FC = () => {
       title: values.title,
       totalSlot: Number(values.totalSlot),
       currentSlot: Number(values.currentSlot),
+      rentPrice: Number(values.rentPrice), // Added field
+      pilePrice: Number(values.pilePrice), // Added field
       genderId: Number(values.genderId),
       oldId: Number(values.oldId),
       note: values.note,
@@ -156,6 +160,24 @@ const CreatePost: React.FC = () => {
           rules={[{ required: true, message: "Vui lòng nhập số chỗ hiện tại!" }]}
         >
           <Input type="number" placeholder="Nhập số chỗ hiện tại" />
+        </Form.Item>
+
+        {/* Added rentPrice field */}
+        <Form.Item
+          label="Giá thuê"
+          name="rentPrice"
+          rules={[{ required: true, message: "Vui lòng nhập giá thuê!" }]}
+        >
+          <Input type="number" placeholder="Nhập giá thuê" suffix="VNĐ" />
+        </Form.Item>
+
+        {/* Added pilePrice field */}
+        <Form.Item
+          label="Phí đặt cọc"
+          name="pilePrice"
+          rules={[{ required: true, message: "Vui lòng nhập phí đặt cọc!" }]}
+        >
+          <Input type="number" placeholder="Nhập phí đặt cọc" suffix="VNĐ" />
         </Form.Item>
 
         <Form.Item
