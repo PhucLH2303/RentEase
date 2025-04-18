@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios, { AxiosError } from 'axios';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Post {
   postId: string;
@@ -35,16 +36,21 @@ interface PostApiResponse {
   data: Post[];
 }
 
-interface Image {
-  imageId: string;
+// Updated interface for the new image response structure
+interface ImageData {
   aptId: string;
-  url: string;
+  images: {
+    id: number;
+    imageUrl: string;
+    createAt: string;
+    updateAt: string;
+  }[];
 }
 
 interface ImageApiResponse {
   statusCode: number;
   message: string;
-  data: Image[];
+  data: ImageData;
 }
 
 // ImageGallery component adapted from ApartmentList.tsx
@@ -122,13 +128,22 @@ const ImageGallery: React.FC<{ images: string[], altText: string }> = ({ images,
   );
 };
 
-// Card component for displaying each post
+// Card component for displaying each post with navigation
 const PropertyCard: React.FC<{ post: Post; isRoommate: boolean }> = ({ post, isRoommate }) => {
+  const navigate = useNavigate();
   const borderColor = isRoommate ? 'border-blue-500' : 'border-green-500';
   const titleColor = isRoommate ? 'text-blue-700' : 'text-green-700';
 
+  const handleCardClick = () => {
+    // Navigate to the post detail page
+    navigate(`/home/post/${post.postId}`);
+  };
+
   return (
-    <div className={`bg-white border-l-4 ${borderColor} rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300`}>
+    <div
+      className={`bg-white border-l-4 ${borderColor} rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer`}
+      onClick={handleCardClick}
+    >
       {/* Image container with fixed height */}
       <div className="relative h-48 overflow-hidden">
         <ImageGallery
@@ -253,10 +268,13 @@ const Home: React.FC = () => {
                 if (
                   imageResponse.data.statusCode === 200 &&
                   imageResponse.data.data &&
-                  imageResponse.data.data.length > 0
+                  imageResponse.data.data.images &&
+                  imageResponse.data.data.images.length > 0
                 ) {
-                  // Store all image URLs
-                  const imageUrls = imageResponse.data.data.map(img => `${API_BASE_URL}${img.url}`);
+                  // Process the new image structure
+                  const imageUrls = imageResponse.data.data.images.map(img =>
+                    `${API_BASE_URL}${img.imageUrl}`
+                  );
                   return { ...post, imageUrls };
                 }
 

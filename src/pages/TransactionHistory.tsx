@@ -238,7 +238,7 @@ const TransactionHistory: React.FC = () => {
           {error && (
             <Alert
               message="Error"
-              description={error}
+              description="No data found."
               type="error"
               showIcon
               className="mb-4"
