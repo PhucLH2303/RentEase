@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios, { AxiosError } from 'axios';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import Caorousel from "../component/carousel";
 
 interface Post {
   postId: string;
