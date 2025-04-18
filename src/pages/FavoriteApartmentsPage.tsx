@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { 
-  Card, 
-  List, 
-  Typography, 
-  Tag, 
-  Space, 
-  Button, 
-  Rate, 
-  Skeleton, 
-  Empty, 
+import {
+  Card,
+  List,
+  Typography,
+  Tag,
+  Space,
+  Button,
+  Rate,
+  Skeleton,
+  Empty,
   message,
   Spin,
   Row,
@@ -17,18 +17,18 @@ import {
   Divider,
   Carousel
 } from "antd";
-import { 
-    HomeOutlined, 
-    HeartFilled,  
-    EnvironmentOutlined, 
-    CalendarOutlined,
-    TeamOutlined,
-    AreaChartOutlined,
-    InfoCircleOutlined,
-    LeftOutlined,
-    RightOutlined,
-    EditOutlined
-  } from "@ant-design/icons";
+import {
+  HomeOutlined,
+  HeartFilled,
+  EnvironmentOutlined,
+  CalendarOutlined,
+  TeamOutlined,
+  AreaChartOutlined,
+  InfoCircleOutlined,
+  LeftOutlined,
+  RightOutlined,
+  EditOutlined
+} from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 
 const { Title, Paragraph, Text } = Typography;
@@ -127,7 +127,7 @@ const FavoriteApartmentsPage: React.FC = () => {
     const fetchFavoriteApartments = async () => {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
-      
+
       if (!token) {
         message.warning("Vui lòng đăng nhập để xem danh sách yêu thích");
         navigate("/");
@@ -150,11 +150,11 @@ const FavoriteApartmentsPage: React.FC = () => {
             })
           }
         );
-        
+
         // If not successful, try alternative approach
         if (!response.ok) {
           console.warn("POST request failed, trying alternative method...");
-          
+
           // Try GET method with query parameters as fallback
           const getResponse = await fetch(
             `https://renteasebe.io.vn/api/AccountLikedApt/GetByAccountId?page=${currentPage}&pageSize=${pageSize}`,
@@ -165,16 +165,16 @@ const FavoriteApartmentsPage: React.FC = () => {
               }
             }
           );
-          
+
           if (!getResponse.ok) {
             throw new Error(`API returned status ${getResponse.status}`);
           }
-          
+
           const responseText = await getResponse.text();
           if (!responseText) {
             throw new Error("Empty response received from server");
           }
-          
+
           const data: ApiResponse<LikedApartment[]> = JSON.parse(responseText);
           processApiResponse(data);
         } else {
@@ -183,7 +183,7 @@ const FavoriteApartmentsPage: React.FC = () => {
           if (!responseText) {
             throw new Error("Empty response received from server");
           }
-          
+
           const data: ApiResponse<LikedApartment[]> = JSON.parse(responseText);
           processApiResponse(data);
         }
@@ -193,7 +193,7 @@ const FavoriteApartmentsPage: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     // Helper function to process API response
     const processApiResponse = (data: ApiResponse<LikedApartment[]>) => {
       if (data.statusCode === 200) {
@@ -201,9 +201,9 @@ const FavoriteApartmentsPage: React.FC = () => {
         const uniqueApts = Array.from(
           new Map(data.data.map(item => [item.aptId, item])).values()
         );
-        
+
         setTotalItems(data.count);
-        
+
         // Khởi tạo với thông tin ban đầu
         const initialFavorites: FavoriteApartment[] = uniqueApts.map(apt => ({
           ...apt,
@@ -212,14 +212,14 @@ const FavoriteApartmentsPage: React.FC = () => {
           loading: true,
           imageLoading: true
         }));
-        
+
         setFavoriteApartments(initialFavorites);
-        
+
         // Fetch thông tin chi tiết cho từng căn hộ
         for (const apt of uniqueApts) {
           fetchApartmentDetails(apt.aptId);
         }
-        
+
         // Check if there are no apartments in the response
         if (data.data.length === 0) {
           setLoading(false);
@@ -236,7 +236,7 @@ const FavoriteApartmentsPage: React.FC = () => {
   // Fetch thông tin chi tiết cho từng căn hộ
   const fetchApartmentDetails = async (aptId: string) => {
     const token = localStorage.getItem("accessToken");
-    
+
     try {
       // Use GET method with query parameter as shown in your example
       const response = await fetch(
@@ -248,55 +248,55 @@ const FavoriteApartmentsPage: React.FC = () => {
           }
         }
       );
-      
+
       if (!response.ok) {
         throw new Error(`API returned status ${response.status}`);
       }
-      
+
       const responseText = await response.text();
       if (!responseText) {
         throw new Error("Empty response received from server");
       }
-      
+
       const data: ApiResponse<ApartmentDetail> = JSON.parse(responseText);
-      
+
       if (data.statusCode === 200) {
         // Cập nhật thông tin chi tiết cho căn hộ tương ứng
-        setFavoriteApartments(prev => 
-          prev.map(apt => 
-            apt.aptId === aptId 
-              ? { ...apt, details: data.data, loading: false } 
+        setFavoriteApartments(prev =>
+          prev.map(apt =>
+            apt.aptId === aptId
+              ? { ...apt, details: data.data, loading: false }
               : apt
           )
         );
-        
+
         // Fetch hình ảnh cho căn hộ này
         fetchApartmentImages(aptId);
       } else {
-        setFavoriteApartments(prev => 
-          prev.map(apt => 
-            apt.aptId === aptId 
-              ? { ...apt, loading: false, imageLoading: false } 
+        setFavoriteApartments(prev =>
+          prev.map(apt =>
+            apt.aptId === aptId
+              ? { ...apt, loading: false, imageLoading: false }
               : apt
           )
         );
       }
     } catch (error) {
       console.error(`Error fetching details for apartment ${aptId}:`, error);
-      setFavoriteApartments(prev => 
-        prev.map(apt => 
-          apt.aptId === aptId 
-            ? { ...apt, loading: false, imageLoading: false } 
+      setFavoriteApartments(prev =>
+        prev.map(apt =>
+          apt.aptId === aptId
+            ? { ...apt, loading: false, imageLoading: false }
             : apt
         )
       );
     }
   };
-  
+
   // Fetch hình ảnh cho từng căn hộ
   const fetchApartmentImages = async (aptId: string) => {
     const token = localStorage.getItem("accessToken");
-    
+
     try {
       const response = await fetch(
         `https://renteasebe.io.vn/api/AptImage/GetByAptId?aptId=${aptId}`,
@@ -307,52 +307,52 @@ const FavoriteApartmentsPage: React.FC = () => {
           }
         }
       );
-      
+
       if (!response.ok) {
         throw new Error(`Image API returned status ${response.status}`);
       }
-      
+
       const responseText = await response.text();
       if (!responseText) {
         throw new Error("Empty response received from image server");
       }
-      
+
       const data: ApiResponse<ApartmentImagesResponse> = JSON.parse(responseText);
-      
+
       if (data.statusCode === 200 && data.data.images.length > 0) {
         // Cập nhật hình ảnh cho căn hộ tương ứng
-        setFavoriteApartments(prev => 
-          prev.map(apt => 
-            apt.aptId === aptId 
-              ? { ...apt, images: data.data.images, imageLoading: false } 
+        setFavoriteApartments(prev =>
+          prev.map(apt =>
+            apt.aptId === aptId
+              ? { ...apt, images: data.data.images, imageLoading: false }
               : apt
           )
         );
       } else {
-        setFavoriteApartments(prev => 
-          prev.map(apt => 
-            apt.aptId === aptId 
-              ? { ...apt, imageLoading: false } 
+        setFavoriteApartments(prev =>
+          prev.map(apt =>
+            apt.aptId === aptId
+              ? { ...apt, imageLoading: false }
               : apt
           )
         );
       }
     } catch (error) {
       console.error(`Error fetching images for apartment ${aptId}:`, error);
-      setFavoriteApartments(prev => 
-        prev.map(apt => 
-          apt.aptId === aptId 
-            ? { ...apt, imageLoading: false } 
+      setFavoriteApartments(prev =>
+        prev.map(apt =>
+          apt.aptId === aptId
+            ? { ...apt, imageLoading: false }
             : apt
         )
       );
     }
-    
+
     // Check if all apartments have finished loading
     // to ensure state has been updated
     setTimeout(() => checkAllApartmentsLoaded(), 100);
   };
-  
+
   // Helper function to check if all apartments have finished loading
   const checkAllApartmentsLoaded = () => {
     setFavoriteApartments(prevApartments => {
@@ -368,7 +368,7 @@ const FavoriteApartmentsPage: React.FC = () => {
   const handleRemoveFavorite = async (aptId: string, event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     const token = localStorage.getItem("accessToken");
     if (!token) {
       message.warning("Vui lòng đăng nhập để thực hiện");
@@ -390,7 +390,7 @@ const FavoriteApartmentsPage: React.FC = () => {
       // If not successful, try alternative approach with body
       if (!response.ok) {
         console.warn("DELETE with query parameter failed, trying with request body...");
-        
+
         const altResponse = await fetch(
           "https://renteasebe.io.vn/api/AccountLikedApt/Remove-Like",
           {
@@ -402,16 +402,16 @@ const FavoriteApartmentsPage: React.FC = () => {
             body: JSON.stringify({ aptId })
           }
         );
-        
+
         if (!altResponse.ok) {
           throw new Error(`API returned status ${altResponse.status}`);
         }
-        
+
         const responseText = await altResponse.text();
         if (!responseText) {
           throw new Error("Empty response received from server");
         }
-        
+
         const data = JSON.parse(responseText);
         processRemoveResponse(data);
       } else {
@@ -420,7 +420,7 @@ const FavoriteApartmentsPage: React.FC = () => {
         if (!responseText) {
           throw new Error("Empty response received from server");
         }
-        
+
         const data = JSON.parse(responseText);
         processRemoveResponse(data);
       }
@@ -428,12 +428,12 @@ const FavoriteApartmentsPage: React.FC = () => {
       console.error("Error removing favorite:", error);
       message.error("Đã xảy ra lỗi khi xóa khỏi yêu thích");
     }
-    
+
     // Helper function to process remove response
     function processRemoveResponse(data: any) {
       if (data.statusCode === 200) {
         message.success("Đã xóa khỏi danh sách yêu thích");
-        
+
         // Cập nhật danh sách
         setFavoriteApartments(prev => prev.filter(apt => apt.aptId !== aptId));
         setTotalItems(prev => prev - 1);
@@ -454,7 +454,7 @@ const FavoriteApartmentsPage: React.FC = () => {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
-  
+
   // Render hình ảnh căn hộ
   const renderApartmentImage = (apartment: FavoriteApartment) => {
     if (apartment.loading || apartment.imageLoading) {
@@ -464,7 +464,7 @@ const FavoriteApartmentsPage: React.FC = () => {
         </div>
       );
     }
-    
+
     // Nếu có hình ảnh, hiển thị hình đầu tiên
     if (apartment.images && apartment.images.length > 0) {
       return (
@@ -488,8 +488,8 @@ const FavoriteApartmentsPage: React.FC = () => {
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           )}
-          
-          <Button 
+
+          <Button
             danger
             type="primary"
             icon={<HeartFilled />}
@@ -498,22 +498,22 @@ const FavoriteApartmentsPage: React.FC = () => {
             onClick={(e) => handleRemoveFavorite(apartment.aptId, e)}
             style={{ position: 'absolute', top: 10, right: 10, zIndex: 2 }}
           />
-           <Button
-      type="primary"
-      style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }}
-      icon={<EditOutlined />}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        navigate('/home/create-post', { state: { aptId: apartment.aptId } });
-      }}
-    >
-      Tạo bài đăng
-    </Button>
+          <Button
+            type="primary"
+            style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }}
+            icon={<EditOutlined />}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate('/home/create-post', { state: { aptId: apartment.aptId } });
+            }}
+          >
+            Tạo bài đăng
+          </Button>
         </div>
       );
     }
-    
+
     // Nếu không có hình ảnh, hiển thị hình placeholder
     return (
       <div style={{ height: '100%', position: 'relative' }}>
@@ -522,7 +522,7 @@ const FavoriteApartmentsPage: React.FC = () => {
           src={`https://renteasebe.io.vn/api/placeholder/apartment/${apartment.aptId}`}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
-        <Button 
+        <Button
           danger
           type="primary"
           icon={<HeartFilled />}
@@ -531,18 +531,18 @@ const FavoriteApartmentsPage: React.FC = () => {
           onClick={(e) => handleRemoveFavorite(apartment.aptId, e)}
           style={{ position: 'absolute', top: 10, right: 10 }}
         />
-         <Button
-      type="primary"
-      style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }}
-      icon={<EditOutlined />}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        navigate('/home/create-post', { state: { aptId: apartment.aptId } });
-      }}
-    >
-      Tạo bài đăng
-    </Button>
+        <Button
+          type="primary"
+          style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }}
+          icon={<EditOutlined />}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            navigate('/home/create-post', { state: { aptId: apartment.aptId } });
+          }}
+        >
+          Tạo bài đăng
+        </Button>
       </div>
     );
   };
@@ -571,7 +571,7 @@ const FavoriteApartmentsPage: React.FC = () => {
             dataSource={favoriteApartments}
             renderItem={(item) => (
               <List.Item>
-                <Link to={`/home/apartment/${item.aptId}`} style={{ display: 'block', width: '100%' }}>
+                <Link to={`/home/apartment/view/${item.aptId}`} style={{ display: 'block', width: '100%' }}>
                   <Card
                     hoverable
                     className="shadow-sm"
@@ -586,7 +586,7 @@ const FavoriteApartmentsPage: React.FC = () => {
                     ) : item.details ? (
                       <>
                         <Title level={4} ellipsis={{ rows: 1 }}>{item.details.name}</Title>
-                        
+
                         <Space wrap className="mb-2">
                           <Tag color={statusMap[item.details.aptStatusId]?.color || "blue"}>
                             {statusMap[item.details.aptStatusId]?.text || "Không xác định"}
@@ -595,14 +595,14 @@ const FavoriteApartmentsPage: React.FC = () => {
                             {categoryMap[item.details.aptCategoryId] || "Không xác định"}
                           </Tag>
                         </Space>
-                        
+
                         <Paragraph ellipsis={{ rows: 1 }}>
                           <Space>
                             <EnvironmentOutlined />
                             <Text>{item.details.address}</Text>
                           </Space>
                         </Paragraph>
-                        
+
                         <Row gutter={8} className="mt-2">
                           <Col span={8}>
                             <Paragraph className="text-center">
@@ -623,9 +623,9 @@ const FavoriteApartmentsPage: React.FC = () => {
                             </Paragraph>
                           </Col>
                         </Row>
-                        
+
                         <Divider className="my-2" />
-                        
+
                         <Row justify="space-between" align="middle">
                           <Col>
                             <Rate disabled value={item.details.rating || 0} style={{ fontSize: 14 }} />
@@ -651,7 +651,7 @@ const FavoriteApartmentsPage: React.FC = () => {
               </List.Item>
             )}
           />
-          
+
           <div className="text-center mt-6">
             <Pagination
               current={currentPage}
