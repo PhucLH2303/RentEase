@@ -1,8 +1,9 @@
-import React, { useState, useRef } from "react";
-import { Carousel, Button } from "antd";
-import { HeartOutlined, HeartFilled, RightOutlined, LeftOutlined } from "@ant-design/icons";
-import type { CarouselRef } from "antd/es/carousel";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useRef, useEffect } from 'react';
+import { Carousel, Button, notification } from 'antd';
+import { HeartOutlined, HeartFilled, RightOutlined, LeftOutlined } from '@ant-design/icons';
+import type { CarouselRef } from 'antd/es/carousel';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 interface Post {
     postId: string;
@@ -17,34 +18,133 @@ interface Post {
     postCategoryId: number;
 }
 
-interface FeaturedCarouselProps {
-    posts: Post[];
-    images: { [key: string]: string }; // Receive images from Home.tsx
+interface ImageData {
+    aptId: string;
+    images: {
+        id: number;
+        imageUrl: string;
+        createAt: string;
+        updateAt: string;
+    }[];
 }
 
-const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts, images }) => {
+interface FeaturedCarouselProps {
+    posts: Post[];
+}
+
+const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts }) => {
     const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+    const [images, setImages] = useState<{ [key: string]: string }>({});
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const carouselRef = useRef<CarouselRef>(null);
+    const API_BASE_URL = 'https://www.renteasebe.io.vn';
     const navigate = useNavigate();
 
-    // Filter posts with status=true and postCategoryId=2
+    // Lọc post có status=true và postCategoryId=1
     const featuredPosts = posts
-        .filter((post) => post.status === true && post.postCategoryId === 2)
+        .filter(post => post.status === true && post.postCategoryId === 2)
         .slice(0, 5);
 
+    useEffect(() => {
+        const fetchImages = async () => {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                navigate('/', { state: { from: window.location.pathname } });
+                notification.warning({
+                    message: 'Authentication Required',
+                    description: 'Please log in to view featured properties',
+                    placement: 'topRight',
+                });
+                return;
+            }
+
+            setLoading(true);
+            setError(null);
+
+            try {
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': '*/*',
+                };
+
+                const imagePromises = featuredPosts.map(post =>
+                    axios.get(`${API_BASE_URL}/api/AptImage/GetByAptId?aptId=${post.aptId}`, { headers })
+                        .catch(error => {
+                            console.error(`Failed to fetch image for aptId ${post.aptId}:`, error.response?.status);
+                            return { data: { data: { aptId: post.aptId, images: [] } } };
+                        })
+                );
+
+                const responses = await Promise.all(imagePromises);
+                const imageMap = responses.reduce((acc, response, index) => {
+                    const imageData: ImageData = response.data.data;
+                    if (imageData.images && imageData.images.length > 0) {
+                        const imageUrl = `${API_BASE_URL}${imageData.images[0].imageUrl}`;
+                        acc[featuredPosts[index].aptId] = imageUrl;
+                    }
+                    return acc;
+                }, {} as { [key: string]: string });
+
+                setImages(imageMap);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                setError(`Failed to load images: ${errorMessage}`);
+                notification.error({
+                    message: 'Error loading images',
+                    description: errorMessage,
+                    placement: 'topRight',
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchImages();
+    }, [posts, navigate]);
+
     const toggleFavorite = (postId: string) => {
-        setFavorites((prev) => ({
+        setFavorites(prev => ({
             ...prev,
             [postId]: !prev[postId],
         }));
     };
 
+    // const getStatusColor = (statusId: number) => {
+    //     switch (statusId) {
+    //         case 1: return 'green';
+    //         case 2: return 'blue';
+    //         case 3: return 'orange';
+    //         default: return 'default';
+    //     }
+    // };
+
+    // const getStatusText = (statusId: number) => {
+    //     switch (statusId) {
+    //         case 1: return 'Còn trống';
+    //         case 2: return 'Sắp có';
+    //         case 3: return 'Đang hot';
+    //         default: return 'Chưa xác định';
+    //     }
+    // };
     const handleOnClick = (postId: string) => {
         navigate(`/home/post/${postId}`);
     };
 
     const next = () => carouselRef.current?.next();
     const previous = () => carouselRef.current?.prev();
+
+    if (loading) {
+        return <div className="text-center p-8">Loading featured properties...</div>;
+    }
+
+    if (error) {
+        return (
+            <div className="text-center text-red-600 p-8">
+                <p>{error}</p>
+            </div>
+        );
+    }
 
     if (featuredPosts.length === 0) {
         return (
@@ -68,7 +168,7 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts, images }) =>
                 dots={{ className: "custom-dots" }}
             >
                 {featuredPosts.map((post) => {
-                    const postImage = images[post.aptId] || "https://via.placeholder.com/400x300?text=No+Image";
+                    const postImage = images[post.aptId];
 
                     return (
                         <div key={post.postId} className="relative">
@@ -77,7 +177,6 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts, images }) =>
                                     src={postImage}
                                     alt={post.title}
                                     className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-700"
-                                    loading="lazy" // Native lazy loading
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
 
@@ -89,6 +188,12 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts, images }) =>
                                         icon={favorites[post.postId] ? <HeartFilled className="text-red-500" /> : <HeartOutlined />}
                                     />
                                 </div>
+
+                                {/* <div className="absolute top-4 left-4">
+                                    <Tag color={getStatusColor(post.approveStatusId)} className="px-3 py-1 text-sm font-medium">
+                                        {getStatusText(post.approveStatusId)}
+                                    </Tag>
+                                </div> */}
 
                                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                                     <h3 className="text-2xl font-bold mb-2">{post.title}</h3>
@@ -107,6 +212,7 @@ const FeaturedCarousel: React.FC<FeaturedCarouselProps> = ({ posts, images }) =>
                                         >
                                             Xem chi tiết
                                         </Button>
+
                                     </div>
                                 </div>
                             </div>
