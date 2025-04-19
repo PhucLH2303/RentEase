@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios, { AxiosError } from 'axios';
-import { ChevronLeft, ChevronRight, MapPin, Home as HomeIcon, Users, Calendar, Heart, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Home as Users, Calendar } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 interface Post {
@@ -125,18 +125,6 @@ const ImageGallery: React.FC<{ images: string[], altText: string }> = ({ images,
                     </div>
                 </>
             )}
-
-            {/* Favorite button overlay */}
-            <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    // Add favorite logic here
-                }}
-                className="absolute top-3 right-3 bg-white rounded-full p-1.5 shadow-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all"
-                aria-label="Add to favorites"
-            >
-                <Heart size={16} className="text-red-500" />
-            </button>
         </div>
     );
 };
@@ -172,10 +160,6 @@ const PropertyCard: React.FC<{ post: Post; isRoommate: boolean }> = ({ post, isR
             <div className="p-4">
                 <div className="flex justify-between items-center mb-1">
                     <h3 className="font-bold text-lg text-gray-800 line-clamp-1">{post.title}</h3>
-                    <div className="flex items-center text-yellow-500">
-                        <Star size={16} fill="currentColor" />
-                        <span className="ml-1 text-sm font-medium">4.8</span>
-                    </div>
                 </div>
 
                 <div className="flex items-center mb-3 text-gray-600 text-sm">
@@ -184,10 +168,6 @@ const PropertyCard: React.FC<{ post: Post; isRoommate: boolean }> = ({ post, isR
                 </div>
 
                 <div className="grid grid-cols-2 gap-y-2 mb-3 text-sm">
-                    <div className="flex items-center text-gray-600">
-                        <HomeIcon size={14} className="mr-1.5" />
-                        <span>Số phòng: {post.totalSlot}</span>
-                    </div>
                     <div className="flex items-center text-gray-600">
                         <Users size={14} className="mr-1.5" />
                         <span>{post.currentSlot}/{post.totalSlot} người</span>
