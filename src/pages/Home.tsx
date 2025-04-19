@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios, { AxiosError } from 'axios';
-import { ChevronLeft, ChevronRight, MapPin, Home as HomeIcon, Users, Calendar, Heart, BookmarkPlus, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Home as HomeIcon, Users, Calendar, BookmarkPlus, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Post {
@@ -64,7 +64,7 @@ const HeroCarousel: React.FC = () => {
   const carouselImages = [
     "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
     "https://images.unsplash.com/photo-1572120360610-d971b9d7767c",
-    "https://images.unsplash.com/photo-1588854337236-6886e0823a7a",
+    "https://i.pinimg.com/736x/ed/59/1a/ed591a8ed1a1450b2bf069e893312617.jpg",
     "https://images.unsplash.com/photo-1580587771525-78b9dba3b914"
   ];
 
@@ -110,7 +110,7 @@ const HeroCarousel: React.FC = () => {
               style={{ imageRendering: "auto" }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-8">
-              <h2 className="text-white text-3xl md:text-4xl font-bold mb-2">Tìm ngôi nhà mơ ước của bạn</h2>
+              <h2 className="text-white text-3xl md:text-4xl font-bold mb-2">Tìm nơi ở phù hợp cho bạn</h2>
               <p className="text-white text-lg md:text-xl mb-6">Khám phá các căn hộ và tìm bạn cùng phòng phù hợp với bạn</p>
               <div className="flex flex-col md:flex-row gap-4 md:items-center">
               </div>
@@ -222,18 +222,6 @@ const ImageGallery: React.FC<{ images: string[], altText: string }> = ({ images,
           </div>
         </>
       )}
-
-      {/* Favorite button overlay */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          // Add favorite logic here
-        }}
-        className="absolute top-3 right-3 bg-white rounded-full p-1.5 shadow-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all"
-        aria-label="Add to favorites"
-      >
-        <Heart size={16} className="text-red-500" />
-      </button>
     </div>
   );
 };
@@ -296,10 +284,6 @@ const PropertyCard: React.FC<{ post: Post; isRoommate: boolean }> = ({ post, isR
       <div className="p-4">
         <div className="flex justify-between items-center mb-1">
           <h3 className="font-bold text-lg text-gray-800 line-clamp-1">{post.title}</h3>
-          <div className="flex items-center text-yellow-500">
-            <Star size={16} fill="currentColor" />
-            <span className="ml-1 text-sm font-medium">4.8</span>
-          </div>
         </div>
 
         <div className="flex items-center mb-3 text-gray-600 text-sm">
@@ -308,10 +292,6 @@ const PropertyCard: React.FC<{ post: Post; isRoommate: boolean }> = ({ post, isR
         </div>
 
         <div className="grid grid-cols-2 gap-y-2 mb-3 text-sm">
-          <div className="flex items-center text-gray-600">
-            <HomeIcon size={14} className="mr-1.5" />
-            <span>Số phòng: {post.totalSlot}</span>
-          </div>
           <div className="flex items-center text-gray-600">
             <Users size={14} className="mr-1.5" />
             <span>{post.currentSlot}/{post.totalSlot} người</span>
