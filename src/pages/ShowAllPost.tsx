@@ -247,7 +247,7 @@ const ShowAllPost: React.FC = () => {
             const postResponse = await axios.get<PostApiResponse>(`${API_BASE_URL}/api/Post/GetAll`, {
                 params: {
                     page: page,
-                    pageSize: 12, // Show more posts per page
+                    pageSize: 100000, // Show more posts per page
                 },
                 headers: {
                     Accept: '*/*',
