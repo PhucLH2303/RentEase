@@ -28,8 +28,8 @@ import {
   TagsOutlined,
   DollarOutlined,
   InfoCircleOutlined,
-  HeartOutlined,
-  HeartFilled,
+  // HeartOutlined,
+  // HeartFilled,
   ArrowRightOutlined,
   MessageOutlined,
 } from "@ant-design/icons";
@@ -142,11 +142,11 @@ const ageMap: Record<number, string> = {
   4: "46+",
 };
 
-const approveStatusMap: Record<number, { text: string; color: string }> = {
-  1: { text: "Đã phê duyệt", color: "green" },
-  2: { text: "Chờ phê duyệt", color: "orange" },
-  3: { text: "Từ chối", color: "red" },
-};
+// const approveStatusMap: Record<number, { text: string; color: string }> = {
+//   1: { text: "Đã phê duyệt", color: "green" },
+//   2: { text: "Chờ phê duyệt", color: "orange" },
+//   3: { text: "Từ chối", color: "red" },
+// };
 
 const aptCategoryMap: Record<number, string> = {
   1: "Chung cư",
@@ -163,9 +163,9 @@ const PostDetailPage: React.FC = () => {
   const [apartmentDetail, setApartmentDetail] = useState<ApartmentDetail | null>(null);
   const [apartmentImages, setApartmentImages] = useState<ApartmentImages | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [isLiked, setIsLiked] = useState<boolean>(false);
-  const [likeLoading, setLikeLoading] = useState<boolean>(false);
-  
+  // const [isLiked, setIsLiked] = useState<boolean>(false);
+  // const [likeLoading, setLikeLoading] = useState<boolean>(false);
+
   // New state for related roommate posts
   const [relatedPosts, setRelatedPosts] = useState<PostDetail[]>([]);
   const [relatedPostsLoading, setRelatedPostsLoading] = useState<boolean>(false);
@@ -264,7 +264,7 @@ const PostDetailPage: React.FC = () => {
               } else {
                 message.error("Không thể tải hình ảnh căn hộ");
               }
-              
+
               // Fetch related roommate posts if the post category is 1 (shared room)
               if (postData.data.postCategoryId === 1) {
                 fetchRelatedRoommatePosts(postData.data.aptId);
@@ -273,10 +273,10 @@ const PostDetailPage: React.FC = () => {
               message.error("Không thể tải thông tin căn hộ");
             }
           }
-          
+
           // Check if post is liked by current user
 
-          await checkLikeStatus(postId, token);
+          // await checkLikeStatus(postId, token);
         } else {
           message.error("Không thể tải thông tin bài đăng");
         }
@@ -295,12 +295,12 @@ const PostDetailPage: React.FC = () => {
       setLoading(false);
     }
   }, [postId]);
-  
+
   // New function to fetch related roommate posts
   const fetchRelatedRoommatePosts = async (aptId: string) => {
     setRelatedPostsLoading(true);
     const token = localStorage.getItem("accessToken");
-    
+
     try {
       const response = await fetch(
         `https://renteasebe.io.vn/api/Post/GetByAptIdAndPostCategoryId?aptId=${aptId}&postCategoryId=2&status=true`,
@@ -310,9 +310,9 @@ const PostDetailPage: React.FC = () => {
           },
         }
       );
-      
+
       const data: ApiResponse<PostDetail[]> = await response.json();
-      
+
       if (data.statusCode === 200) {
         setRelatedPosts(data.data);
       } else {
@@ -324,128 +324,128 @@ const PostDetailPage: React.FC = () => {
       setRelatedPostsLoading(false);
     }
   };
-  
+
   // Placeholder for checking like status - implement according to your API
 
-  const checkLikeStatus = async (postId: string, token: string | null) => {
-    if (!token) {
-      setIsLiked(false);
-      return;
-    }
+  // const checkLikeStatus = async (postId: string, token: string | null) => {
+  //   if (!token) {
+  //     setIsLiked(false);
+  //     return;
+  //   }
 
-    try {
-      const response = await fetch(
-        `https://renteasebe.io.vn/api/AccountLikedPost/Check-Like?postId=${postId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+  //   try {
+  //     const response = await fetch(
+  //       `https://renteasebe.io.vn/api/AccountLikedPost/Check-Like?postId=${postId}`,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       }
+  //     );
 
-      if (!response.ok) {
-        throw new Error(`Failed to check like status: ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`Failed to check like status: ${response.status}`);
+  //     }
 
-      const data = await response.json();
-      if (data.statusCode === 200) {
-        setIsLiked(data.data);
-      } else {
-        setIsLiked(false);
-      }
-    } catch (error) {
-      console.error("Error checking like status:", error);
-      setIsLiked(false);
-    }
-  };
+  //     const data = await response.json();
+  //     if (data.statusCode === 200) {
+  //       setIsLiked(data.data);
+  //     } else {
+  //       setIsLiked(false);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error checking like status:", error);
+  //     setIsLiked(false);
+  //   }
+  // };
 
-  const handleLikePost = async () => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      message.warning("Vui lòng đăng nhập để lưu bài đăng yêu thích");
-      return;
-    }
+  // const handleLikePost = async () => {
+  //   const token = localStorage.getItem("accessToken");
+  //   if (!token) {
+  //     message.warning("Vui lòng đăng nhập để lưu bài đăng yêu thích");
+  //     return;
+  //   }
 
-    if (!postId) {
-      message.error("Mã bài đăng không hợp lệ");
-      return;
-    }
+  //   if (!postId) {
+  //     message.error("Mã bài đăng không hợp lệ");
+  //     return;
+  //   }
 
-    setLikeLoading(true);
-    try {
-      const response = await fetch(
-        "https://renteasebe.io.vn/api/AccountLikedPost/Add-Like",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            postId: postId,
-          }),
-        }
-      );
+  //   setLikeLoading(true);
+  //   try {
+  //     const response = await fetch(
+  //       "https://renteasebe.io.vn/api/AccountLikedPost/Add-Like",
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //         body: JSON.stringify({
+  //           postId: postId,
+  //         }),
+  //       }
+  //     );
 
-      if (!response.ok) {
-        throw new Error(`Failed to like post: ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`Failed to like post: ${response.status}`);
+  //     }
 
-      const data = await response.json();
-      if (data.statusCode === 200) {
-        setIsLiked(true);
-        message.success("Đã thêm vào danh sách yêu thích");
-      } else {
-        message.error(data.message || "Không thể thêm vào danh sách yêu thích");
-      }
-    } catch (error) {
-      console.error("Error liking post:", error);
-      message.error("Đã xảy ra lỗi khi thêm vào yêu thích");
-    } finally {
-      setLikeLoading(false);
-    }
-  };
+  //     const data = await response.json();
+  //     if (data.statusCode === 200) {
+  //       setIsLiked(true);
+  //       message.success("Đã thêm vào danh sách yêu thích");
+  //     } else {
+  //       message.error(data.message || "Không thể thêm vào danh sách yêu thích");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error liking post:", error);
+  //     message.error("Đã xảy ra lỗi khi thêm vào yêu thích");
+  //   } finally {
+  //     setLikeLoading(false);
+  //   }
+  // };
 
-  const handleUnlikePost = async () => {
-    const token = localStorage.getItem("accessToken");
+  // const handleUnlikePost = async () => {
+  //   const token = localStorage.getItem("accessToken");
 
-    if (!token || !postId) {
-      token
-        ? message.error("Mã bài đăng không hợp lệ")
-        : message.warning("Vui lòng đăng nhập để thực hiện");
-      return;
-    }
+  //   if (!token || !postId) {
+  //     token
+  //       ? message.error("Mã bài đăng không hợp lệ")
+  //       : message.warning("Vui lòng đăng nhập để thực hiện");
+  //     return;
+  //   }
 
-    setLikeLoading(true);
-    try {
-      const response = await fetch(
-        `https://renteasebe.io.vn/api/AccountLikedPost/Remove-Like?postId=${postId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+  //   setLikeLoading(true);
+  //   try {
+  //     const response = await fetch(
+  //       `https://renteasebe.io.vn/api/AccountLikedPost/Remove-Like?postId=${postId}`,
+  //       {
+  //         method: "DELETE",
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       }
+  //     );
 
-      if (!response.ok) {
-        throw new Error(`Failed to unlike post: ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`Failed to unlike post: ${response.status}`);
+  //     }
 
-      const data = await response.json();
-      if (data.statusCode === 200) {
-        setIsLiked(false);
-        message.success("Đã xóa khỏi danh sách yêu thích");
-      } else {
-        message.error(data.message || "Không thể xóa khỏi danh sách yêu thích");
-      }
-    } catch (error) {
-      console.error("Error unliking post:", error);
-      message.error("Đã xảy ra lỗi khi xóa khỏi yêu thích");
-    } finally {
-      setLikeLoading(false);
-    }
-  };
+  //     const data = await response.json();
+  //     if (data.statusCode === 200) {
+  //       setIsLiked(false);
+  //       message.success("Đã xóa khỏi danh sách yêu thích");
+  //     } else {
+  //       message.error(data.message || "Không thể xóa khỏi danh sách yêu thích");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error unliking post:", error);
+  //     message.error("Đã xảy ra lỗi khi xóa khỏi yêu thích");
+  //   } finally {
+  //     setLikeLoading(false);
+  //   }
+  // };
 
   // Handle navigation to another post
   const navigateToPost = (postId: string) => {
@@ -603,13 +603,13 @@ const PostDetailPage: React.FC = () => {
   const renderVacancyStatus = (total: number, current: number) => {
     const remaining = Math.max(0, total - current);
     let color = "green";
-    
+
     if (remaining === 0) {
       color = "red";
     } else if (remaining <= 1) {
       color = "orange";
     }
-    
+
     return (
       <Tag color={color}>
         {remaining > 0 ? `Còn ${remaining} chỗ trống` : "Đã đủ người"}
@@ -683,15 +683,6 @@ const PostDetailPage: React.FC = () => {
                   </Button>
                   <Button icon={<MailOutlined />} onClick={emailPoster}>
                     Email
-                  </Button>
-                  <Button
-                    type={isLiked ? "default" : "primary"}
-                    danger={isLiked}
-                    icon={isLiked ? <HeartFilled /> : <HeartOutlined />}
-                    onClick={isLiked ? handleUnlikePost : handleLikePost}
-                    loading={likeLoading}
-                  >
-                    {isLiked ? "Đã thích" : "Yêu thích"}
                   </Button>
                 </Space>
               </Card>
@@ -811,7 +802,7 @@ const PostDetailPage: React.FC = () => {
             <Card bordered={false} className="mb-6 shadow">
               <Title level={3}>Bài đăng tìm người ở ghép cùng căn hộ</Title>
               <Divider />
-              
+
               {relatedPostsLoading ? (
                 <Skeleton active paragraph={{ rows: 3 }} />
               ) : relatedPosts.length > 0 ? (
@@ -819,11 +810,11 @@ const PostDetailPage: React.FC = () => {
                   dataSource={relatedPosts}
                   itemLayout="vertical"
                   renderItem={item => (
-                    <List.Item 
+                    <List.Item
                       key={item.postId}
                       actions={[
-                        <Button 
-                          type="primary" 
+                        <Button
+                          type="primary"
                           onClick={() => navigateToPost(item.postId)}
                           icon={<ArrowRightOutlined />}
                         >
@@ -902,17 +893,6 @@ const PostDetailPage: React.FC = () => {
               >
                 Trò chuyện trực tiếp
               </Button>
-              <Button
-                block
-                size="large"
-                icon={isLiked ? <HeartFilled /> : <HeartOutlined />}
-                onClick={isLiked ? handleUnlikePost : handleLikePost}
-                loading={likeLoading}
-                danger={isLiked}
-                type={isLiked ? "default" : "primary"}
-              >
-                {isLiked ? "Đã lưu vào yêu thích" : "Lưu vào yêu thích"}
-              </Button>
             </Space>
           </Card>
 
@@ -933,12 +913,12 @@ const PostDetailPage: React.FC = () => {
                 <Text>Độ tuổi:</Text>
                 <Tag color="purple">{ageMap[postDetail.oldId] || "Không yêu cầu"}</Tag>
               </div>
-              <div className="flex justify-between">
+              {/* <div className="flex justify-between">
                 <Text>Trạng thái:</Text>
                 <Tag color={approveStatusMap[postDetail.approveStatusId]?.color || "blue"}>
                   {approveStatusMap[postDetail.approveStatusId]?.text || "Không xác định"}
                 </Tag>
-              </div>
+              </div> */}
             </Space>
           </Card>
 
@@ -961,8 +941,8 @@ const PostDetailPage: React.FC = () => {
             <div className="mt-4">
               {renderVacancyStatus(postDetail.totalSlot, postDetail.currentSlot)}
               <Text className="ml-2">
-                {Math.max(0, postDetail.totalSlot - postDetail.currentSlot) > 0 
-                  ? "Còn nhận thêm người" 
+                {Math.max(0, postDetail.totalSlot - postDetail.currentSlot) > 0
+                  ? "Còn nhận thêm người"
                   : "Đã đủ người"}
               </Text>
             </div>
