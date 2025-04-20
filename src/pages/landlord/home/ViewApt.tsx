@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Home, Mail, CheckCircle, AlertCircle, XCircle, ArrowLeft, Star, Calendar, Users, Box } from 'lucide-react';
+import { MapPin, Home, Mail, CheckCircle, ArrowLeft, Star, Calendar, Users, Box } from 'lucide-react';
 import axios from 'axios';
 
 interface Apartment {
@@ -138,23 +138,23 @@ const ViewApt: React.FC = () => {
         fetchApartmentDetails();
     }, [aptId, navigate]);
 
-    const getApproveStatusName = (statusId: number) => {
-        switch (statusId) {
-            case 1: return 'Đang duyệt';
-            case 2: return 'Đã duyệt';
-            case 3: return 'Bị từ chối';
-            default: return 'Không xác định';
-        }
-    };
+    // const getApproveStatusName = (statusId: number) => {
+    //     switch (statusId) {
+    //         case 1: return 'Đang duyệt';
+    //         case 2: return 'Đã duyệt';
+    //         case 3: return 'Bị từ chối';
+    //         default: return 'Không xác định';
+    //     }
+    // };
 
-    const getApproveStatusIcon = (statusId: number) => {
-        switch (statusId) {
-            case 1: return <AlertCircle size={18} className="mr-2 text-yellow-500" />;
-            case 2: return <CheckCircle size={18} className="mr-2 text-green-500" />;
-            case 3: return <XCircle size={18} className="mr-2 text-red-500" />;
-            default: return null;
-        }
-    };
+    // const getApproveStatusIcon = (statusId: number) => {
+    //     switch (statusId) {
+    //         case 1: return <AlertCircle size={18} className="mr-2 text-yellow-500" />;
+    //         case 2: return <CheckCircle size={18} className="mr-2 text-green-500" />;
+    //         case 3: return <XCircle size={18} className="mr-2 text-red-500" />;
+    //         default: return null;
+    //     }
+    // };
 
     const getAptStatusName = (statusId: number) => {
         switch (statusId) {
@@ -242,10 +242,10 @@ const ViewApt: React.FC = () => {
                 <div className="bg-blue-600 text-white p-6">
                     <div className="flex flex-wrap justify-between items-center">
                         <h1 className="text-2xl font-bold mb-2 md:mb-0">{apartment.name}</h1>
-                        <div className="flex items-center bg-white bg-opacity-20 px-4 py-2 rounded-full">
+                        {/* <div className="flex items-center bg-white bg-opacity-20 px-4 py-2 rounded-full">
                             {getApproveStatusIcon(apartment.approveStatusId)}
                             <span>{getApproveStatusName(apartment.approveStatusId)}</span>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 
@@ -413,10 +413,10 @@ const ViewApt: React.FC = () => {
                         <div className="bg-gray-50 p-4 rounded-lg">
                             <h2 className="text-lg font-semibold mb-3">Trạng thái</h2>
                             <div className="space-y-3">
-                                <div className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg flex items-center">
+                                {/* <div className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg flex items-center">
                                     {getApproveStatusIcon(apartment.approveStatusId)}
                                     <span>Trạng thái duyệt: {getApproveStatusName(apartment.approveStatusId)}</span>
-                                </div>
+                                </div> */}
                                 <div className="px-3 py-2 bg-green-50 text-green-700 rounded-lg">
                                     Trạng thái căn hộ: {getAptStatusName(apartment.aptStatusId)}
                                 </div>
