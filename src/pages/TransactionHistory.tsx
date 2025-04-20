@@ -234,12 +234,12 @@ const TransactionHistory: React.FC = () => {
             </Button>
           </div>
 
-          {/* Error Alert */}
+          {/* No Data Alert */}
           {error && (
             <Alert
-              message="Error"
-              description="No data found."
-              type="error"
+              message="Thông báo"
+              description="Không có dữ liệu để hiển thị."
+              type="info" // hoặc 'warning' nếu bạn muốn nhấn mạnh hơn chút
               showIcon
               className="mb-4"
             />
