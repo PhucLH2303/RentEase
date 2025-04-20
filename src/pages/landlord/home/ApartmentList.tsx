@@ -91,7 +91,6 @@ const UtilityModal: React.FC<{
 }> = ({ isOpen, onClose, utilities, selectedUtilities, onSave }) => {
     const [selected, setSelected] = useState<number[]>(selectedUtilities);
 
-    // Update selected utilities when the selectedUtilities prop changes
     useEffect(() => {
         setSelected(selectedUtilities);
     }, [selectedUtilities]);
@@ -164,8 +163,13 @@ const UtilityModal: React.FC<{
     );
 };
 
-// Inline ImageGallery component
-const ImageGallery: React.FC<{ images: string[], altText: string }> = ({ images, altText }) => {
+// Updated ImageGallery component to include delete functionality
+const ImageGallery: React.FC<{
+    images: { id: number; url: string }[];
+    altText: string;
+    aptId: string;
+    onImageDelete: (aptId: string, imageId: number) => void;
+}> = ({ images, altText, aptId, onImageDelete }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     // Fallback image if the array is empty
@@ -193,10 +197,17 @@ const ImageGallery: React.FC<{ images: string[], altText: string }> = ({ images,
         );
     };
 
+    const handleDeleteClick = (e: React.MouseEvent, imageId: number) => {
+        e.stopPropagation();
+        if (window.confirm('Bạn có chắc chắn muốn xóa ảnh này không?')) {
+            onImageDelete(aptId, imageId);
+        }
+    };
+
     return (
         <div className="relative h-full w-full group">
             <img
-                src={images[currentIndex]}
+                src={images[currentIndex].url}
                 alt={`${altText} - image ${currentIndex + 1}`}
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -205,38 +216,49 @@ const ImageGallery: React.FC<{ images: string[], altText: string }> = ({ images,
                 }}
             />
 
-            {images.length > 1 && (
+            {images.length > 0 && (
                 <>
                     <button
-                        onClick={goToPrevious}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="Previous image"
+                        onClick={(e) => handleDeleteClick(e, images[currentIndex].id)}
+                        className="absolute top-2 left-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Delete image"
                     >
-                        <ChevronLeft size={20} />
+                        <Trash2 size={16} />
                     </button>
 
-                    <button
-                        onClick={goToNext}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="Next image"
-                    >
-                        <ChevronRight size={20} />
-                    </button>
-
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
-                        {images.map((_, index) => (
+                    {images.length > 1 && (
+                        <>
                             <button
-                                key={index}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCurrentIndex(index);
-                                }}
-                                className={`w-2 h-2 rounded-full transition-colors ${currentIndex === index ? 'bg-white' : 'bg-white/50'
-                                    }`}
-                                aria-label={`Go to image ${index + 1}`}
-                            />
-                        ))}
-                    </div>
+                                onClick={goToPrevious}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label="Previous image"
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+
+                            <button
+                                onClick={goToNext}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label="Next image"
+                            >
+                                <ChevronRight size={20} />
+                            </button>
+
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-1">
+                                {images.map((_, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentIndex(index);
+                                        }}
+                                        className={`w-2 h-2 rounded-full transition-colors ${currentIndex === index ? 'bg-white' : 'bg-white/50'}`}
+                                        aria-label={`Go to image ${index + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </>
             )}
         </div>
@@ -245,7 +267,7 @@ const ImageGallery: React.FC<{ images: string[], altText: string }> = ({ images,
 
 const UserApartmentList: React.FC = () => {
     const [apartments, setApartments] = useState<Apartment[]>([]);
-    const [images, setImages] = useState<{ [key: string]: string[] }>({});
+    const [images, setImages] = useState<{ [key: string]: { id: number; url: string }[] }>({});
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedStatus, setSelectedStatus] = useState<number | 'all'>('all');
@@ -254,20 +276,17 @@ const UserApartmentList: React.FC = () => {
     const navigate = useNavigate();
     const API_BASE_URL = 'https://renteasebe.io.vn';
 
-    // New states for utilities
     const [utilities, setUtilities] = useState<Utility[]>([]);
     const [selectedUtilities, setSelectedUtilities] = useState<{ [key: string]: number[] }>({});
     const [isUtilityModalOpen, setIsUtilityModalOpen] = useState<boolean>(false);
     const [currentAptId, setCurrentAptId] = useState<string | null>(null);
     const [addingUtilitiesFor, setAddingUtilitiesFor] = useState<string | null>(null);
     const [loadingUtilities, setLoadingUtilities] = useState<boolean>(false);
-
     useEffect(() => {
         fetchApartments();
         fetchUtilities();
     }, []);
 
-    // Add this effect to fetch utilities for each apartment when the apartments list changes
     useEffect(() => {
         if (apartments.length > 0) {
             apartments.forEach(apartment => {
@@ -286,8 +305,6 @@ const UserApartmentList: React.FC = () => {
                 return;
             }
 
-            console.log('Fetching utilities...');
-
             const response = await axios.get<UtilityApiResponse>(
                 `${API_BASE_URL}/api/Utility/GetAll?page=1&pageSize=50`,
                 {
@@ -298,13 +315,8 @@ const UserApartmentList: React.FC = () => {
                 }
             );
 
-            console.log('Utilities API response:', response.data);
-
             if (response.data && response.data.data) {
                 setUtilities(response.data.data);
-                console.log('Set utilities state:', response.data.data);
-            } else {
-                console.error('Invalid API response format:', response.data);
             }
         } catch (err) {
             console.error('Error fetching utilities:', err);
@@ -319,26 +331,17 @@ const UserApartmentList: React.FC = () => {
             const token = localStorage.getItem('accessToken');
             if (!token) return;
 
-            console.log(`Fetching utilities for apartment ${aptId}...`);
-
             const response = await axios.get<AptUtilityApiResponse>(
                 `${API_BASE_URL}/api/AptUtility/GetByAptId?aptId=${aptId}&page=1&pageSize=50`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            console.log(`Utilities for apartment ${aptId}:`, response.data);
-
             if (response.data && response.data.data) {
-                // Extract utility IDs from response
                 const utilityIds = response.data.data.map(item => item.utilityId);
-
-                // Update state with the utility IDs for this apartment
                 setSelectedUtilities(prev => ({
                     ...prev,
                     [aptId]: utilityIds
                 }));
-
-                console.log(`Set utilities for apartment ${aptId}:`, utilityIds);
             }
         } catch (err) {
             console.error(`Error fetching utilities for apartment ${aptId}:`, err);
@@ -373,14 +376,10 @@ const UserApartmentList: React.FC = () => {
                 Accept: '*/*',
             };
 
-            console.log('Fetching apartments...');
-
             const aptResponse = await axios.get<ApiResponse>(
                 `${API_BASE_URL}/api/Apt/GetByAccountId?accountId=${accountId}`,
                 { headers }
             );
-
-            console.log('Apartments API response:', aptResponse.data);
 
             const fetchedApartments = aptResponse.data.data;
             setApartments(fetchedApartments);
@@ -392,15 +391,16 @@ const UserApartmentList: React.FC = () => {
 
             const imageResponses = await Promise.all(imagePromises);
 
-            // Cập nhật cách lưu trữ ảnh - lưu tất cả các URL ảnh cho mỗi căn hộ
             const imageMap = imageResponses.reduce((acc, response) => {
                 const imageData: ImageData = response.data.data;
                 if (imageData.images && imageData.images.length > 0) {
-                    // Lưu trữ mảng các URL ảnh
-                    acc[imageData.aptId] = imageData.images.map(img => `${API_BASE_URL}${img.imageUrl}`);
+                    acc[imageData.aptId] = imageData.images.map(img => ({
+                        id: img.id,
+                        url: `${API_BASE_URL}${img.imageUrl}`
+                    }));
                 }
                 return acc;
-            }, {} as { [key: string]: string[] });
+            }, {} as { [key: string]: { id: number; url: string }[] });
 
             setImages(imageMap);
             setError(null);
@@ -421,13 +421,11 @@ const UserApartmentList: React.FC = () => {
                     return;
                 }
 
-                // Sử dụng API endpoint mới
                 await axios.delete(`${API_BASE_URL}/api/Apt`, {
                     headers: { Authorization: `Bearer ${token}` },
-                    params: { aptId: aptId } // Truyền aptId qua query parameter
+                    params: { aptId: aptId }
                 });
 
-                // Cập nhật state sau khi xóa thành công
                 setApartments(apartments.filter(apt => apt.aptId !== aptId));
                 setImages(prev => {
                     const newImages = { ...prev };
@@ -444,7 +442,6 @@ const UserApartmentList: React.FC = () => {
     };
 
     const handleImageUpload = (aptId: string) => {
-        // Trigger file input click
         if (fileInputRefs.current[aptId]) {
             fileInputRefs.current[aptId]?.click();
         }
@@ -481,7 +478,6 @@ const UserApartmentList: React.FC = () => {
                 }
             );
 
-            // Refresh images for this apartment
             const imageResponse = await axios.get(
                 `${API_BASE_URL}/api/AptImage/GetByAptId?aptId=${aptId}`,
                 { headers: { Authorization: `Bearer ${token}` } }
@@ -489,10 +485,12 @@ const UserApartmentList: React.FC = () => {
 
             const imageData: ImageData = imageResponse.data.data;
             if (imageData.images && imageData.images.length > 0) {
-                // Cập nhật mảng ảnh cho căn hộ này
                 setImages(prev => ({
                     ...prev,
-                    [aptId]: imageData.images.map(img => `${API_BASE_URL}${img.imageUrl}`)
+                    [aptId]: imageData.images.map(img => ({
+                        id: img.id,
+                        url: `${API_BASE_URL}${img.imageUrl}`
+                    }))
                 }));
             }
 
@@ -502,26 +500,46 @@ const UserApartmentList: React.FC = () => {
             alert('Không thể tải ảnh lên. Vui lòng thử lại sau.');
         } finally {
             setUploadingId(null);
-            // Reset file input
             if (fileInputRefs.current[aptId]) {
                 (fileInputRefs.current[aptId] as HTMLInputElement).value = '';
             }
         }
     };
 
-    // Function to open utility modal for a specific apartment
+    const handleDeleteImage = async (aptId: string, imageId: number) => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+                navigate('/', { state: { from: '/apartments' } });
+                return;
+            }
+
+            await axios.delete(`${API_BASE_URL}/api/AptImage`, {
+                headers: { Authorization: `Bearer ${token}` },
+                params: { imageId }
+            });
+
+            setImages(prev => ({
+                ...prev,
+                [aptId]: prev[aptId].filter(img => img.id !== imageId)
+            }));
+
+            alert('Xóa ảnh thành công!');
+        } catch (err) {
+            console.error('Error deleting image:', err);
+            alert('Không thể xóa ảnh. Vui lòng thử lại sau.');
+        }
+    };
+
     const openUtilityModal = (aptId: string) => {
         setCurrentAptId(aptId);
-
-        // If we haven't loaded utilities for this apartment yet, fetch them
         if (!selectedUtilities[aptId]) {
             fetchApartmentUtilities(aptId);
         }
-
         setIsUtilityModalOpen(true);
     };
 
-    // Function to handle saving selected utilities
     const handleSaveUtilities = async (selectedIds: number[]) => {
         if (!currentAptId) return;
 
@@ -534,14 +552,12 @@ const UserApartmentList: React.FC = () => {
                 return;
             }
 
-            // First, remove all existing utilities
             await axios.post(
                 `${API_BASE_URL}/api/AptUtility/Remove-All-Utilities?aptId=${currentAptId}`,
                 {},
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            // Then, add selected utilities
             if (selectedIds.length > 0) {
                 const selectedUtilitiesData = selectedIds.map(id => {
                     const utility = utilities.find(u => u.id === id);
@@ -561,7 +577,6 @@ const UserApartmentList: React.FC = () => {
                 );
             }
 
-            // Update local state to reflect changes
             setSelectedUtilities(prev => ({
                 ...prev,
                 [currentAptId]: selectedIds
@@ -620,7 +635,6 @@ const UserApartmentList: React.FC = () => {
         );
     }
 
-
     if (error) {
         return (
             <div className="bg-blue-100 border border-blue-300 text-blue-700 px-4 py-3 rounded flex items-center gap-2" role="alert">
@@ -630,7 +644,6 @@ const UserApartmentList: React.FC = () => {
         );
     }
 
-
     return (
         <div>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -639,29 +652,25 @@ const UserApartmentList: React.FC = () => {
                     <div className="flex bg-gray-100 rounded-lg p-1">
                         <button
                             onClick={() => setSelectedStatus('all')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium ${selectedStatus === 'all' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                                }`}
+                            className={`px-3 py-1 rounded-md text-sm font-medium ${selectedStatus === 'all' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                         >
                             Tất cả
                         </button>
                         <button
                             onClick={() => setSelectedStatus(1)}
-                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${selectedStatus === 1 ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                                }`}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${selectedStatus === 1 ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                         >
                             {getApproveStatusIcon(1)} Đang duyệt
                         </button>
                         <button
                             onClick={() => setSelectedStatus(2)}
-                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${selectedStatus === 2 ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                                }`}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${selectedStatus === 2 ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                         >
                             {getApproveStatusIcon(2)} Đã duyệt
                         </button>
                         <button
                             onClick={() => setSelectedStatus(3)}
-                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${selectedStatus === 3 ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                                }`}
+                            className={`px-3 py-1 rounded-md text-sm font-medium flex items-center ${selectedStatus === 3 ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
                         >
                             {getApproveStatusIcon(3)} Bị từ chối
                         </button>
@@ -687,7 +696,6 @@ const UserApartmentList: React.FC = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredApartments.map((apartment) => {
-                        // Lấy mảng ảnh cho căn hộ hiện tại, nếu không có thì là mảng rỗng
                         const aptImages = images[apartment.aptId] || [];
 
                         return (
@@ -699,6 +707,8 @@ const UserApartmentList: React.FC = () => {
                                     <ImageGallery
                                         images={aptImages}
                                         altText={apartment.name}
+                                        aptId={apartment.aptId}
+                                        onImageDelete={handleDeleteImage}
                                     />
                                     <div className="absolute top-3 right-3">
                                         <span
@@ -707,7 +717,6 @@ const UserApartmentList: React.FC = () => {
                                             )} flex items-center`}
                                         >
                                             {getApproveStatusIcon(apartment.approveStatusId)}
-                                            {/* {getApproveStatusName(apartment.approveStatusId)} */}
                                         </span>
                                     </div>
                                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
@@ -733,7 +742,6 @@ const UserApartmentList: React.FC = () => {
                                         <span>Ngày đăng: {formatDate(apartment.createdAt)}</span>
                                         <span>Trạng thái: {getAptStatusName(apartment.aptStatusId)}</span>
                                     </div>
-                                    {/* Selected Utilities Display */}
                                     {selectedUtilities[apartment.aptId] && selectedUtilities[apartment.aptId].length > 0 && (
                                         <div className="mt-2">
                                             <p className="text-xs text-gray-600 font-medium mb-1">Tiện ích:</p>
@@ -753,7 +761,6 @@ const UserApartmentList: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Hidden file input for each apartment */}
                                     <input
                                         type="file"
                                         ref={(el) => {
@@ -776,8 +783,7 @@ const UserApartmentList: React.FC = () => {
                                         <button
                                             onClick={() => handleImageUpload(apartment.aptId)}
                                             disabled={uploadingId === apartment.aptId}
-                                            className={`bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 flex items-center ${uploadingId === apartment.aptId ? 'opacity-70 cursor-not-allowed' : ''
-                                                }`}
+                                            className={`bg-purple-600 text-white px-3 py-1 rounded-md hover:bg-purple-700 flex items-center ${uploadingId === apartment.aptId ? 'opacity-70 cursor-not-allowed' : ''}`}
                                         >
                                             {uploadingId === apartment.aptId ? (
                                                 <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-1"></div>
@@ -790,8 +796,7 @@ const UserApartmentList: React.FC = () => {
                                         <button
                                             onClick={() => openUtilityModal(apartment.aptId)}
                                             disabled={addingUtilitiesFor === apartment.aptId}
-                                            className={`bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center ${addingUtilitiesFor === apartment.aptId ? 'opacity-70 cursor-not-allowed' : ''
-                                                }`}
+                                            className={`bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 flex items-center ${addingUtilitiesFor === apartment.aptId ? 'opacity-70 cursor-not-allowed' : ''}`}
                                         >
                                             {addingUtilitiesFor === apartment.aptId ? (
                                                 <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-1"></div>
@@ -830,7 +835,6 @@ const UserApartmentList: React.FC = () => {
                 </div>
             )}
 
-            {/* Utility Modal */}
             <UtilityModal
                 isOpen={isUtilityModalOpen}
                 onClose={() => setIsUtilityModalOpen(false)}
