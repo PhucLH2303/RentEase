@@ -383,7 +383,7 @@ const Home: React.FC = () => {
         const postResponse = await axios.get<PostApiResponse>(`${API_BASE_URL}/api/Post/GetAll`, {
           params: {
             page: 1,
-            pageSize: 10,
+            pageSize: 100000,
           },
           headers: {
             Accept: '*/*',
