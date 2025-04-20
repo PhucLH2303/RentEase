@@ -27,6 +27,7 @@ import TransactionHistory from "./pages/TransactionHistory";
 import EditPost from "./pages/EditPost";
 // import ManageRequest from "./pages/ManageRequest";
 import ShowAllPost from "./pages/ShowAllPost";
+import About from "./pages/About";
 
 const App: React.FC = () => {
   return (
@@ -61,6 +62,7 @@ const App: React.FC = () => {
           <Route path="apartment/detail/:aptId" element={<ApartmentDetail />} />
           <Route path="apartment/:aptId" element={<ApartmentDetailInHome />} />
           <Route path="all-posts" element={<ShowAllPost />} />
+          <Route path="about" element={<About />} />
         </Route>
       </Routes>
     </Router>

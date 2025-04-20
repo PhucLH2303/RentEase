@@ -318,7 +318,8 @@ const CallToAction: React.FC = () => {
       <h2 className="text-3xl font-bold mb-4">Bạn có phòng cần cho thuê?</h2>
       <p className="mb-6 max-w-2xl mx-auto">Đăng tin ngay để tiếp cận hàng ngàn người đang tìm kiếm chỗ ở mỗi ngày. Miễn phí đăng tin, dễ dàng quản lý.</p>
       <div className="flex justify-center gap-4 flex-wrap">
-        <button className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition-colors">
+        <button className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition-colors"
+          onClick={() => window.location.href = '/home/about'}>
           Tìm hiểu thêm
         </button>
       </div>
@@ -556,6 +557,10 @@ const Home: React.FC = () => {
   const handleCardClick1 = () => {
     navigate(`/home/all-posts`);
   };
+  // const handleCardClick2 = () => {
+  //   navigate(`/home/about`);
+  // };
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="w-full pt-6">
@@ -675,7 +680,8 @@ const Home: React.FC = () => {
           </div>
 
           <div className="flex justify-center mt-8">
-            <button className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-3 rounded-lg transition-colors">
+            <button className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-3 rounded-lg transition-colors"
+              onClick={() => window.location.href = '/home/about'}>
               Tìm hiểu thêm về chúng tôi
             </button>
           </div>
@@ -709,7 +715,6 @@ const Home: React.FC = () => {
 
           <div className="text-center mt-6">
             <p className="text-gray-500">Không tìm thấy câu trả lời bạn đang tìm kiếm?</p>
-            <button className="mt-2 text-blue-600 hover:underline">Liên hệ hỗ trợ</button>
           </div>
         </section>
 
