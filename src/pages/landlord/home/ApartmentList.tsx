@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, CheckCircle, AlertCircle, XCircle, Edit, Trash2, MapPin, Image, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import axios from 'axios';
+import { InfoCircleOutlined } from '@ant-design/icons';
 
 interface Apartment {
     aptId: string;
@@ -619,14 +620,16 @@ const UserApartmentList: React.FC = () => {
         );
     }
 
+
     if (error) {
         return (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <strong className="font-bold">Lỗi!</strong>
-                <span className="block sm:inline"> {error}</span>
+            <div className="bg-blue-100 border border-blue-300 text-blue-700 px-4 py-3 rounded flex items-center gap-2" role="alert">
+                <InfoCircleOutlined style={{ fontSize: '20px', color: '#1e40af' }} />
+                <span>Không có dữ liệu để hiển thị.</span>
             </div>
         );
     }
+
 
     return (
         <div>
