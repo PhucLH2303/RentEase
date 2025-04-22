@@ -352,7 +352,7 @@ const PostDetail = () => {
       )}
 
       {/* Payment Options - Only shown for non-roleId 2 users */}
-      {roleId !== "2" && orderTypes.length > 0 && (
+      {roleId !== "2" && post.status == false  && orderTypes.length > 0 && (
         <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-lg">
           <h3 className="text-xl font-semibold mb-4">Chọn gói thanh toán</h3>
           <div className="grid grid-cols-2 gap-4">
@@ -382,6 +382,33 @@ const PostDetail = () => {
               </a>
             </div>
           )}
+        </div>
+      )}
+      {roleId === "3" && post.status == true && (
+        <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-lg mb-6">
+          <h3 className="text-xl font-semibold mb-4">Trạng thái bài đăng</h3>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-700">
+                Trạng thái hiện tại: 
+                <span className={`ml-2 font-bold ${post.status ? "text-green-600" : "text-yellow-600"}`}>
+                  {post.status ? "Public" : "Private"}
+                </span>
+              </p>
+            </div>
+            <div>
+              <button
+                onClick={handleStatusToggle}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  post.status 
+                    ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" 
+                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                }`}
+              >
+                Chuyển sang {post.status ? "Private" : "Public"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
